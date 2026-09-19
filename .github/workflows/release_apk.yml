@@ -22,19 +22,15 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '17'
-          cache: 'gradle'
-
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v3
+        uses: gradle/actions/setup-gradle@v4
 
       - name: Synchronize Web Assets to Android Project
         run: |
           mkdir -p android/app/src/main/assets
           cp -r android-app/* android/app/src/main/assets/
-          echo "Assets sincronizados en APK."
+          echo "Assets web sincronizados en APK."
 
       - name: Build Android Release APK
         run: |

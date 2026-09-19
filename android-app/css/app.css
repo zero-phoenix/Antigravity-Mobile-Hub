@@ -448,3 +448,95 @@ nav.app-navbar {
 .nav-tab-icon {
   font-size: 1.25rem;
 }
+
+/* Quick Suggestion Chips */
+.quick-suggestions-bar {
+  display: flex;
+  gap: 6px;
+  padding: 4px 0 8px 0;
+  overflow-x: auto;
+  flex-shrink: 0;
+  scrollbar-width: none;
+}
+.quick-suggestions-bar::-webkit-scrollbar {
+  display: none;
+}
+
+.suggestion-chip {
+  background: var(--bg-surface-elevated);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-main);
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.suggestion-chip:active {
+  background: var(--accent-indigo);
+  border-color: var(--accent-cyan);
+  color: #fff;
+  transform: scale(0.96);
+}
+
+.chip-clickable {
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+.chip-clickable:active {
+  transform: scale(0.95);
+}
+
+/* Modal Overlay & Card */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(4px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 14px;
+}
+
+.modal-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  width: 100%;
+  max-width: 560px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+}
+
+.modal-header {
+  padding: 12px 14px;
+  background: var(--bg-surface-elevated);
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-code {
+  padding: 12px;
+  font-family: var(--font-mono);
+  font-size: var(--code-font-size);
+  color: #e2e8f0;
+  overflow: auto;
+  flex: 1;
+  background: #08090b;
+  white-space: pre;
+}
+
+.modal-footer {
+  padding: 10px 14px;
+  background: var(--bg-surface-elevated);
+  border-top: 1px solid var(--border-subtle);
+}

@@ -17,10 +17,10 @@
     <div class="brand-wrapper">
       <span class="brand-icon">⚡</span>
       <span class="brand-title">Antigravity</span>
-      <span class="badge-tag">Hub</span>
+      <span class="badge-tag">Hub v1.1</span>
     </div>
     <div class="header-actions">
-      <div class="host-badge" id="host-badge">
+      <div class="host-badge" id="host-badge" onclick="switchTab('view-settings', document.getElementById('tab-btn-settings'))" title="Toca para configurar conexión">
         <span class="dot" id="host-status-dot"></span>
         <span id="host-status-label">Desconectado</span>
       </div>
@@ -39,12 +39,21 @@
     
     <!-- VISTA 1: Gemini Intelligence Workspace -->
     <section id="view-gemini" class="view-pane active">
+      <!-- Chips de Acción Rápida (1 toque) -->
+      <div class="quick-suggestions-bar">
+        <button class="suggestion-chip" onclick="quickPrompt('Explícame el estado actual de este proyecto')">💡 Estado Proyecto</button>
+        <button class="suggestion-chip" onclick="quickPrompt('Explora el código de yabausevita en GitHub y resume su arquitectura')">🎮 yabausevita</button>
+        <button class="suggestion-chip" onclick="quickPrompt('Ejecuta un diagnóstico rápido del sistema en mi PC Windows')">⚡ Diagnóstico PC</button>
+        <button class="suggestion-chip" onclick="quickPrompt('¿Qué herramientas y capacidades autónomas tienes disponibles?')">🛠️ Capacidades</button>
+      </div>
+
       <div class="chat-scroll-area" id="chat-scroll">
         <div class="message-card gemini">
-          👋 <b>Bienvenido a Antigravity Mobile.</b><br>
+          👋 <b>Bienvenido a Antigravity Mobile v1.1.</b><br>
           Estoy conectado a tu sesión y a la nube de GitHub. Puedes pedirme leer repositorios sin descargarlos, o pedirme ejecutar tareas en tu computadora.
         </div>
       </div>
+
       <div class="chat-composer">
         <input type="text" id="gemini-prompt-input" class="composer-input" placeholder="Pregunta o instruye a Gemini..." onkeydown="if(event.key==='Enter') handleSendPrompt()">
         <button class="btn-icon-send" onclick="handleSendPrompt()">➤</button>
@@ -54,22 +63,25 @@
     <!-- VISTA 2: GitHub Cloud Explorer (Universal Zero-Download) -->
     <section id="view-repos" class="view-pane">
       <div class="repo-browser-header">
-        <h3 style="font-size:1.05rem; font-weight:700; color:#fff;">Explorador Cloud Universal</h3>
+        <div>
+          <h3 style="font-size:1.05rem; font-weight:700; color:#fff;">Explorador Cloud Universal</h3>
+          <span style="font-size:0.75rem; color:var(--text-muted);">Lectura en RAM sin descargar repos</span>
+        </div>
         <button class="btn-action-small" onclick="loadReposList('zero-phoenix')">⭐ Mis Repos</button>
       </div>
       
-      <!-- Barra de búsqueda universal de repositorios (propios o terceros) -->
+      <!-- Barra de búsqueda universal de repositorios -->
       <div style="display:flex; gap:6px; margin-bottom:10px;">
-        <input type="text" id="custom-repo-input" class="composer-input" style="font-size:0.8rem; padding:8px 12px;" placeholder="Pega URL o escribe owner/repo (ej: vitasdk/vita-headers)..." onkeydown="if(event.key==='Enter') exploreCustomRepo()">
+        <input type="text" id="custom-repo-input" class="composer-input" style="font-size:0.82rem; padding:8px 12px;" placeholder="Pega URL o escribe owner/repo..." onkeydown="if(event.key==='Enter') exploreCustomRepo()">
         <button class="btn-action-small" style="background:var(--accent-indigo);" onclick="exploreCustomRepo()">Explorar</button>
       </div>
 
-      <!-- Chips de acceso rápido a repositorios populares/frecuentes -->
+      <!-- Chips de acceso rápido a repositorios frecuentes -->
       <div style="display:flex; gap:6px; margin-bottom:12px; overflow-x:auto; padding-bottom:4px;">
-        <span class="badge-tag" style="cursor:pointer;" onclick="openRepoTree('zero-phoenix/yabausevita')">🕹️ yabausevita</span>
-        <span class="badge-tag" style="cursor:pointer;" onclick="openRepoTree('zero-phoenix/meta-orquesta')">🔒 meta-orquesta</span>
-        <span class="badge-tag" style="cursor:pointer;" onclick="openRepoTree('vitasdk/vita-headers')">📦 vitasdk/headers</span>
-        <span class="badge-tag" style="cursor:pointer;" onclick="openRepoTree('vitasdk/vita-toolchain')">⚙️ vitasdk/toolchain</span>
+        <span class="badge-tag chip-clickable" onclick="openRepoTree('zero-phoenix/yabausevita')">🕹️ yabausevita</span>
+        <span class="badge-tag chip-clickable" onclick="openRepoTree('zero-phoenix/Antigravity-Mobile-Hub')">⚡ Mobile-Hub</span>
+        <span class="badge-tag chip-clickable" onclick="openRepoTree('zero-phoenix/SystemHope-ResAdmis')">🏛️ ResAdmis</span>
+        <span class="badge-tag chip-clickable" onclick="openRepoTree('vitasdk/vita-headers')">📦 vita-headers</span>
       </div>
 
       <div id="repos-container"></div>
@@ -78,18 +90,21 @@
     <!-- VISTA 3: PC Remote Terminal -->
     <section id="view-terminal" class="view-pane">
       <div class="terminal-shell">
-        <div style="background:#181818; padding:6px 12px; font-size:0.75rem; color:var(--text-muted); display:flex; justify-content:space-between;">
-          <span>Windows PowerShell (Host PC)</span>
-          <span style="cursor:pointer; color:var(--accent-blue);" onclick="clearTerminal()">Limpiar</span>
+        <div style="background:#181818; padding:8px 14px; font-size:0.75rem; color:var(--text-muted); display:flex; justify-content:space-between; align-items:center;">
+          <span id="term-host-label">💻 Windows PowerShell (Host PC)</span>
+          <div style="display:flex; gap:10px;">
+            <span style="cursor:pointer; color:var(--accent-cyan);" onclick="copyTerminalOutput()">📋 Copiar</span>
+            <span style="cursor:pointer; color:var(--accent-blue);" onclick="clearTerminal()">🧹 Limpiar</span>
+          </div>
         </div>
-        <div class="terminal-stream" id="term-stream">PS > Enlace activo. Listo para ejecutar en la PC...</div>
+        <div class="terminal-stream" id="term-stream">PS > Enlace activo. Listo para ejecutar comandos en la PC...</div>
         
         <!-- Botones de comando rápido -->
         <div style="display:flex; gap:6px; padding:6px 8px; background:#0c0c0c; overflow-x:auto;">
-          <button class="btn-action-small" onclick="runTerminalCommand('git status')">git status</button>
-          <button class="btn-action-small" onclick="runTerminalCommand('Get-Process | Select-Object -First 5')">top processes</button>
-          <button class="btn-action-small" onclick="runTerminalCommand('adb devices')">adb devices</button>
-          <button class="btn-action-small" onclick="runTerminalCommand('dir')">dir</button>
+          <button class="btn-action-small" onclick="runTerminalCommand('git status')">🌿 git status</button>
+          <button class="btn-action-small" onclick="runTerminalCommand('Get-Process | Select-Object -First 5')">📈 Procesos</button>
+          <button class="btn-action-small" onclick="runTerminalCommand('adb devices')">📱 adb devices</button>
+          <button class="btn-action-small" onclick="runTerminalCommand('dir')">📁 dir</button>
         </div>
 
         <div class="terminal-bar">
@@ -102,11 +117,28 @@
 
     <!-- VISTA 4: Ajustes y Configuración -->
     <section id="view-settings" class="view-pane">
-      <h3 style="font-size:1.1rem; font-weight:700; color:#fff; margin-bottom:14px;">Ajustes de Interfaz y Modelos</h3>
+      <h3 style="font-size:1.1rem; font-weight:700; color:#fff; margin-bottom:14px;">⚙️ Ajustes y Conexión</h3>
       
+      <!-- Feedback de prueba de conexión -->
+      <div id="conn-test-feedback" style="display:none; padding:10px 14px; border-radius:8px; margin-bottom:14px; font-size:0.85rem; border:1px solid var(--border-subtle);"></div>
+
+      <!-- Conexión con la PC -->
+      <div class="settings-section">
+        <label class="settings-label">💻 Dirección del Servidor PC (Host):</label>
+        <input type="text" id="input-bridge-host" class="composer-input" style="width:100%; border-radius:6px; margin-bottom:8px;" placeholder="192.168.18.113:8765">
+        
+        <label class="settings-label">🔑 Token Secreto de Conexión:</label>
+        <input type="password" id="input-bridge-token" class="composer-input" style="width:100%; border-radius:6px; margin-bottom:10px;" placeholder="antigravity-secret-key">
+        
+        <div style="display:flex; gap:8px;">
+          <button class="btn-action-small" style="flex:1; padding:8px; background:var(--accent-indigo);" onclick="testHostConnection()">🔌 Probar Conexión Ahora</button>
+          <button class="btn-action-small" style="padding:8px 12px; background:var(--bg-surface-elevated);" onclick="togglePasswordVisibility('input-bridge-token')">👁️</button>
+        </div>
+      </div>
+
       <!-- Escala de Texto General -->
       <div class="settings-section">
-        <label class="settings-label">Tamaño de Interfaz (Texto General):</label>
+        <label class="settings-label">🎨 Tamaño de Interfaz (Texto General):</label>
         <div class="size-pill-group">
           <div class="size-pill ui-size-btn" data-scale="0.85" onclick="setFontScale('0.85')">Compacto</div>
           <div class="size-pill ui-size-btn active" data-scale="1" onclick="setFontScale('1')">Estándar</div>
@@ -117,7 +149,7 @@
 
       <!-- Escala de Código y Terminal -->
       <div class="settings-section">
-        <label class="settings-label">Tamaño de Fuente en Código / Consola:</label>
+        <label class="settings-label">💻 Tamaño de Fuente en Código / Consola:</label>
         <div class="size-pill-group">
           <div class="size-pill code-size-btn" data-scale="0.85" onclick="setCodeFontScale('0.85')">Pequeño</div>
           <div class="size-pill code-size-btn active" data-scale="1" onclick="setCodeFontScale('1')">Normal</div>
@@ -125,26 +157,42 @@
         </div>
       </div>
 
-      <!-- Conexión con la PC -->
-      <div class="settings-section">
-        <label class="settings-label">Dirección del Servidor PC (Host):</label>
-        <input type="text" id="input-bridge-host" class="composer-input" style="width:100%; border-radius:6px; margin-bottom:8px;" placeholder="ej. 192.168.1.50:8765">
-        <label class="settings-label">Token Secreto de Conexión:</label>
-        <input type="text" id="input-bridge-token" class="composer-input" style="width:100%; border-radius:6px;" placeholder="antigravity-secret-key">
-      </div>
-
       <!-- Claves API locales (Opcional si no se usa PC) -->
       <div class="settings-section">
-        <label class="settings-label">GEMINI_API_KEY (Para uso autónomo sin PC):</label>
-        <input type="password" id="input-gemini-key" class="composer-input" style="width:100%; border-radius:6px; margin-bottom:8px;" placeholder="AIzaSy...">
-        <label class="settings-label">GitHub Token Personal (Opcional):</label>
-        <input type="password" id="input-github-token" class="composer-input" style="width:100%; border-radius:6px;" placeholder="gho_...">
+        <label class="settings-label">✨ GEMINI_API_KEY (Para uso autónomo en nube):</label>
+        <div style="display:flex; gap:6px; margin-bottom:8px;">
+          <input type="password" id="input-gemini-key" class="composer-input" style="flex:1; border-radius:6px;" placeholder="AIzaSy...">
+          <button class="btn-action-small" style="padding:8px 12px; background:var(--bg-surface-elevated);" onclick="togglePasswordVisibility('input-gemini-key')">👁️</button>
+        </div>
+
+        <label class="settings-label">🐙 GitHub Token Personal (Opcional):</label>
+        <div style="display:flex; gap:6px; margin-bottom:12px;">
+          <input type="password" id="input-github-token" class="composer-input" style="flex:1; border-radius:6px;" placeholder="gho_...">
+          <button class="btn-action-small" style="padding:8px 12px; background:var(--bg-surface-elevated);" onclick="togglePasswordVisibility('input-github-token')">👁️</button>
+        </div>
         
-        <button class="btn-action-small" style="width:100%; margin-top:12px; padding:10px; background:var(--primary-gradient); font-size:0.9rem;" onclick="saveSettings()">Guardar Ajustes</button>
+        <button class="btn-action-small" style="width:100%; padding:10px; background:var(--primary-gradient); font-size:0.9rem;" onclick="saveSettings()">💾 Guardar y Aplicar Ajustes</button>
       </div>
     </section>
 
   </main>
+
+  <!-- Modal Visor de Código de Repositorio -->
+  <div id="file-viewer-modal" class="modal-overlay" style="display:none;">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div>
+          <span id="modal-file-title" style="font-weight:700; color:#fff; font-size:0.9rem;">archivo.c</span>
+          <div id="modal-file-meta" style="font-size:0.75rem; color:var(--text-muted);">0 líneas</div>
+        </div>
+        <button class="btn-action-small" style="background:#374151; padding:4px 10px;" onclick="closeFileViewer()">✕ Cerrar</button>
+      </div>
+      <pre id="modal-file-content" class="modal-code"></pre>
+      <div class="modal-footer">
+        <button class="btn-action-small" style="background:var(--accent-indigo); width:100%; padding:8px;" onclick="analyzeCurrentModalFile()">🤖 Analizar este archivo con Gemini</button>
+      </div>
+    </div>
+  </div>
 
   <!-- Bottom Navigation Bar -->
   <nav class="app-navbar">
@@ -152,15 +200,15 @@
       <span class="nav-tab-icon">💬</span>
       <span>Gemini</span>
     </button>
-    <button class="nav-tab-btn" onclick="switchTab('view-repos', this)">
+    <button class="nav-tab-btn" id="tab-btn-repos" onclick="switchTab('view-repos', this)">
       <span class="nav-tab-icon">☁️</span>
       <span>Repos</span>
     </button>
-    <button class="nav-tab-btn" onclick="switchTab('view-terminal', this)">
+    <button class="nav-tab-btn" id="tab-btn-terminal" onclick="switchTab('view-terminal', this)">
       <span class="nav-tab-icon">💻</span>
       <span>Terminal</span>
     </button>
-    <button class="nav-tab-btn" onclick="switchTab('view-settings', this)">
+    <button class="nav-tab-btn" id="tab-btn-settings" onclick="switchTab('view-settings', this)">
       <span class="nav-tab-icon">⚙️</span>
       <span>Ajustes</span>
     </button>

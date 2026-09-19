@@ -18,6 +18,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 4. Cargar Repositorios Iniciales si es necesario
   loadReposList();
+
+  // 5. Poblar Ajustes de Interfaz
+  initSettingsInputs();
 });
 
 // ==============================================================================
@@ -144,6 +147,14 @@ function handleSendPrompt() {
   GeminiEngine.sendMessage(prompt, handleBridgeEvents);
 }
 
+function quickPrompt(text) {
+  const input = document.getElementById('gemini-prompt-input');
+  if (input) {
+    input.value = text;
+    handleSendPrompt();
+  }
+}
+
 function escapeHTML(str) {
   if (!str) return '';
   const p = document.createElement('p');
@@ -252,22 +263,39 @@ async function openRepoTree(repoName) {
   }
 }
 
+let currentModalFile = { repoName: null, filePath: null };
+
 async function viewFileInRam(repoName, filePath) {
-  const modal = document.getElementById('file-code-modal');
-  modal.style.display = 'block';
-  modal.innerHTML = `<div style="color:var(--text-muted)">Leyendo ${filePath} directamente en memoria...</div>`;
+  currentModalFile = { repoName, filePath };
+  const modal = document.getElementById('file-viewer-modal');
+  const title = document.getElementById('modal-file-title');
+  const meta = document.getElementById('modal-file-meta');
+  const content = document.getElementById('modal-file-content');
+  
+  if (title) title.innerText = filePath;
+  if (meta) meta.innerText = 'Leyendo en RAM desde GitHub...';
+  if (content) content.innerText = 'Cargando contenido sin descargar...';
+  if (modal) modal.style.display = 'flex';
 
   try {
-    const res = await GitHubEngine.readFile(repoName, filePath, 1, 200);
-    modal.innerHTML = `
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-        <span style="font-size:0.8rem; font-weight:700; color:#fff;">${filePath} (${res.showing_lines} de ${res.total_lines} líneas)</span>
-        <button class="btn-action-small" style="background:var(--accent-indigo);" onclick="sendCodeToGemini('${repoName}', '${filePath}')">Consultar a Gemini</button>
-      </div>
-      <div class="code-viewer-box">${escapeHTML(res.content)}</div>
-    `;
+    const res = await GitHubEngine.readFile(repoName, filePath, 1, 300);
+    if (meta) meta.innerText = `${res.showing_lines} de ${res.total_lines} líneas (${repoName})`;
+    if (content) content.innerHTML = escapeHTML(res.content);
   } catch (e) {
-    modal.innerHTML = `<div style="color:var(--danger)">Error al leer archivo: ${e.message}</div>`;
+    if (meta) meta.innerText = 'Error';
+    if (content) content.innerHTML = `<span style="color:var(--danger)">Error al leer archivo: ${escapeHTML(e.message)}</span>`;
+  }
+}
+
+function closeFileViewer() {
+  const modal = document.getElementById('file-viewer-modal');
+  if (modal) modal.style.display = 'none';
+}
+
+function analyzeCurrentModalFile() {
+  closeFileViewer();
+  if (currentModalFile.repoName && currentModalFile.filePath) {
+    sendCodeToGemini(currentModalFile.repoName, currentModalFile.filePath);
   }
 }
 
@@ -304,6 +332,17 @@ function runTerminalCommand(cmd = null) {
 
 function clearTerminal() {
   document.getElementById('term-stream').textContent = 'PS > Consola reiniciada.\n';
+}
+
+function copyTerminalOutput() {
+  const stream = document.getElementById('term-stream');
+  if (stream && stream.textContent) {
+    navigator.clipboard.writeText(stream.textContent).then(() => {
+      alert('Registro de terminal copiado.');
+    }).catch(() => {
+      alert('No se pudo copiar.');
+    });
+  }
 }
 
 // ==============================================================================
@@ -351,6 +390,53 @@ function handleBridgeEvents(data) {
 // ==============================================================================
 // Módulo 4: Ajustes
 // ==============================================================================
+
+function initSettingsInputs() {
+  const hostInput = document.getElementById('input-bridge-host');
+  const tokenInput = document.getElementById('input-bridge-token');
+  const geminiInput = document.getElementById('input-gemini-key');
+  const ghInput = document.getElementById('input-github-token');
+
+  if (hostInput) hostInput.value = BridgeClient.serverHost || '192.168.18.113:8765';
+  if (tokenInput) tokenInput.value = BridgeClient.token || 'antigravity-secret-key';
+  if (geminiInput && GeminiEngine.config.apiKey) geminiInput.value = GeminiEngine.config.apiKey;
+  if (ghInput && GitHubEngine.token) ghInput.value = GitHubEngine.token;
+}
+
+function togglePasswordVisibility(inputId) {
+  const el = document.getElementById(inputId);
+  if (!el) return;
+  el.type = el.type === 'password' ? 'text' : 'password';
+}
+
+async function testHostConnection() {
+  const banner = document.getElementById('conn-test-feedback');
+  if (!banner) return;
+  banner.style.display = 'block';
+  banner.style.background = 'var(--bg-surface-elevated)';
+  banner.style.color = 'var(--accent-blue)';
+  banner.innerText = '⏳ Probando conexión con PC...';
+
+  const host = document.getElementById('input-bridge-host').value.trim() || BridgeClient.serverHost;
+  const token = document.getElementById('input-bridge-token').value.trim() || BridgeClient.token;
+
+  try {
+    const start = Date.now();
+    const res = await fetch(`http://${host}/api/status?token=${encodeURIComponent(token)}`);
+    const latency = Date.now() - start;
+    if (res.ok) {
+      const data = await res.json();
+      banner.style.color = 'var(--success)';
+      banner.innerHTML = `✅ <b>Enlace exitoso con PC:</b> ${data.hostname || host} (${latency}ms)`;
+    } else {
+      banner.style.color = 'var(--danger)';
+      banner.innerHTML = `❌ Error de autenticación HTTP ${res.status}.`;
+    }
+  } catch (err) {
+    banner.style.color = 'var(--danger)';
+    banner.innerHTML = `❌ No se pudo conectar a ${host}: ${err.message}`;
+  }
+}
 
 function saveSettings() {
   const host = document.getElementById('input-bridge-host').value.trim();

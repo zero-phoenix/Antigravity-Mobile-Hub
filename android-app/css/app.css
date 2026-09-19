@@ -58,6 +58,7 @@ html, body {
   display: flex;
   flex-direction: column;
   height: 100vh;
+  height: 100dvh;
   max-width: 600px; /* Centrado en tablets */
   margin: 0 auto;
   position: relative;

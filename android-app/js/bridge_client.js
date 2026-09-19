@@ -5,7 +5,7 @@
 const BridgeClient = {
   ws: null,
   token: localStorage.getItem('bridge_token') || 'antigravity-secret-key',
-  serverHost: localStorage.getItem('bridge_host') || window.location.host || '127.0.0.1:8765',
+  serverHost: localStorage.getItem('bridge_host') || (window.location.host && window.location.host.length > 0 ? window.location.host : '192.168.18.113:8765'),
   connected: false,
   eventListeners: [],
 

@@ -1,13 +1,14 @@
 // Service Worker para Antigravity Mobile Hub
 const CACHE_NAME = 'antigravity-hub-v1';
 const ASSETS_TO_CACHE = [
-  '/',
-  '/manifest.json',
-  '/css/app.css',
-  '/js/app.js',
-  '/js/gemini_engine.js',
-  '/js/github_engine.js',
-  '/js/bridge_client.js'
+  './',
+  'index.html',
+  'manifest.json',
+  'css/app.css',
+  'js/app.js',
+  'js/gemini_engine.js',
+  'js/github_engine.js',
+  'js/bridge_client.js'
 ];
 
 self.addEventListener('install', (event) => {

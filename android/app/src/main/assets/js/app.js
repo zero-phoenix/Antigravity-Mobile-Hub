@@ -11,9 +11,9 @@ document.addEventListener('DOMContentLoaded', () => {
   BridgeClient.on(handleBridgeEvents);
   BridgeClient.init();
 
-  // 3. Registrar Service Worker para PWA
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/service-worker.js').catch(() => {});
+  // 3. Registrar Service Worker para PWA (solo cuando se sirve por HTTP/HTTPS)
+  if ('serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
+    navigator.serviceWorker.register('service-worker.js').catch(() => {});
   }
 
   // 4. Cargar Repositorios Iniciales si es necesario

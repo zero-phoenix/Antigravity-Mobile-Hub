@@ -60,22 +60,24 @@ class PopperianAuditTestSuite(unittest.TestCase):
         """
         Falsación de la Hipótesis de Integridad de Enlaces:
         ¿Falta algún archivo referenciado en el HTML principal?
+        ¿Se usan rutas relativas para compatibilidad total con WebView (file:///android_asset/)?
         """
         index_path = APP_DIR / "index.html"
         self.assertTrue(index_path.exists())
         with open(index_path, "r", encoding="utf-8") as f:
             html = f.read()
 
-        # Buscar enlaces a css y js
-        css_links = re.findall(r'href=["\'](/css/[^"\']+)["\']', html)
-        js_links = re.findall(r'src=["\'](/js/[^"\']+)["\']', html)
+        css_links = re.findall(r'href=["\']([^"\']+\.css)["\']', html)
+        js_links = re.findall(r'src=["\']([^"\']+\.js)["\']', html)
 
         for c in css_links:
-            local_file = APP_DIR / c.lstrip("/")
+            self.assertFalse(c.startswith("/"), f"CSS no debe usar ruta absoluta de raíz en WebView: {c}")
+            local_file = APP_DIR / c
             self.assertTrue(local_file.exists(), f"Archivo CSS referenciado no existe: {local_file}")
 
         for j in js_links:
-            local_file = APP_DIR / j.lstrip("/")
+            self.assertFalse(j.startswith("/"), f"JS no debe usar ruta absoluta de raíz en WebView: {j}")
+            local_file = APP_DIR / j
             self.assertTrue(local_file.exists(), f"Archivo JS referenciado no existe: {local_file}")
 
     def test_falsify_service_worker_routes(self):

@@ -2,7 +2,7 @@
   "name": "Antigravity Mobile Hub",
   "short_name": "Antigravity",
   "description": "Agente autónomo de ingeniería, cliente Gemini y control remoto de PC",
-  "start_url": "/?mode=standalone",
+  "start_url": "index.html?mode=standalone",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#0a0b0d",

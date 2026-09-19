@@ -1,0 +1,449 @@
+/* Antigravity Mobile Hub — Cyber-OLED Mobile Theme */
+
+:root {
+  /* Escala tipográfica dinámica (ajustable por usuario) */
+  --font-scale: 1;
+  --code-font-scale: 1;
+  --base-font-size: calc(15px * var(--font-scale));
+  --code-font-size: calc(13px * var(--code-font-scale));
+
+  /* Paleta Cyber-OLED */
+  --bg-oled: #08090b;
+  --bg-surface: #121418;
+  --bg-surface-elevated: #1a1d24;
+  --bg-card: #20242d;
+  --border-subtle: #292e3a;
+  --border-accent: #4f46e5;
+
+  /* Colores de acento */
+  --primary-gradient: linear-gradient(135deg, #6366f1 0%, #3b82f6 50%, #06b6d4 100%);
+  --accent-indigo: #6366f1;
+  --accent-blue: #3b82f6;
+  --accent-cyan: #06b6d4;
+
+  /* Estados */
+  --success: #10b981;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+
+  /* Textos */
+  --text-pure: #ffffff;
+  --text-main: #f3f4f6;
+  --text-muted: #9ca3af;
+  --text-dim: #6b7280;
+
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  --font-mono: "Consolas", "Fira Code", "Courier New", monospace;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+  user-select: text;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background-color: var(--bg-oled);
+  color: var(--text-main);
+  font-family: var(--font-sans);
+  font-size: var(--base-font-size);
+}
+
+#app-root {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  max-width: 600px; /* Centrado en tablets */
+  margin: 0 auto;
+  position: relative;
+  background-color: var(--bg-oled);
+}
+
+/* Header */
+header.app-header {
+  background-color: var(--bg-surface);
+  border-bottom: 1px solid var(--border-subtle);
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+
+.brand-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.brand-icon {
+  font-size: 1.25rem;
+}
+
+.brand-title {
+  font-weight: 800;
+  font-size: 1.05rem;
+  letter-spacing: -0.3px;
+  background: var(--primary-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.badge-tag {
+  font-size: 0.68rem;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 700;
+  text-transform: uppercase;
+  background-color: rgba(99, 102, 241, 0.2);
+  color: var(--accent-cyan);
+  border: 1px solid rgba(6, 182, 212, 0.4);
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.host-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.72rem;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background-color: var(--bg-surface-elevated);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-muted);
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: var(--danger);
+}
+
+.dot.connected {
+  background-color: var(--success);
+  box-shadow: 0 0 6px var(--success);
+}
+
+/* Sub-header de configuración rápida para Gemini */
+.gemini-quick-bar {
+  background-color: var(--bg-surface-elevated);
+  border-bottom: 1px solid var(--border-subtle);
+  padding: 6px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.76rem;
+  flex-shrink: 0;
+}
+
+.model-pill {
+  background: rgba(59, 130, 246, 0.15);
+  color: var(--accent-blue);
+  border: 1px solid rgba(59, 130, 246, 0.4);
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.thinking-pill {
+  background: rgba(245, 158, 11, 0.15);
+  color: var(--warning);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.grounding-toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.grounding-toggle.active {
+  color: var(--success);
+  font-weight: 600;
+}
+
+/* Contenedor Principal */
+main.views-container {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+.view-pane {
+  position: absolute;
+  inset: 0;
+  display: none;
+  flex-direction: column;
+  overflow-y: auto;
+  padding: 12px;
+}
+
+.view-pane.active {
+  display: flex;
+}
+
+/* Módulo 1: Gemini Chat */
+.chat-scroll-area {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.message-card {
+  max-width: 90%;
+  padding: 10px 14px;
+  border-radius: 14px;
+  line-height: 1.48;
+  word-break: break-word;
+  font-size: var(--base-font-size);
+}
+
+.message-card.user {
+  align-self: flex-end;
+  background: var(--primary-gradient);
+  color: #fff;
+  border-bottom-right-radius: 2px;
+}
+
+.message-card.gemini {
+  align-self: flex-start;
+  background-color: var(--bg-surface-elevated);
+  border: 1px solid var(--border-subtle);
+  border-bottom-left-radius: 2px;
+  color: var(--text-main);
+}
+
+.message-card.tool-event {
+  align-self: stretch;
+  background: rgba(99, 102, 241, 0.08);
+  border: 1px dashed var(--accent-indigo);
+  border-radius: 8px;
+  font-family: var(--font-mono);
+  font-size: var(--code-font-size);
+  color: var(--accent-cyan);
+  padding: 8px 12px;
+}
+
+.chat-composer {
+  background-color: var(--bg-surface);
+  border-top: 1px solid var(--border-subtle);
+  padding: 8px 12px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.composer-input {
+  flex: 1;
+  background-color: var(--bg-surface-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: 22px;
+  padding: 10px 16px;
+  color: #fff;
+  font-size: var(--base-font-size);
+  outline: none;
+}
+
+.composer-input:focus {
+  border-color: var(--accent-indigo);
+}
+
+.btn-icon-send {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: none;
+  background: var(--primary-gradient);
+  color: #fff;
+  font-size: 1.15rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+/* Módulo 2: GitHub Cloud Explorer */
+.repo-browser-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.card-item {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  padding: 12px;
+  margin-bottom: 10px;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.card-item:hover, .card-item:active {
+  border-color: var(--accent-indigo);
+}
+
+.card-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 700;
+  color: var(--accent-blue);
+  font-size: calc(var(--base-font-size) * 1.05);
+}
+
+.card-desc {
+  font-size: calc(var(--base-font-size) * 0.85);
+  color: var(--text-muted);
+  margin: 6px 0;
+}
+
+.code-viewer-box {
+  background-color: #030405;
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: 10px;
+  font-family: var(--font-mono);
+  font-size: var(--code-font-size);
+  max-height: 400px;
+  overflow: auto;
+  white-space: pre-wrap;
+  color: #e5e7eb;
+}
+
+/* Módulo 3: PC Remote Terminal */
+.terminal-shell {
+  background-color: #000;
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  font-family: var(--font-mono);
+}
+
+.terminal-stream {
+  flex: 1;
+  padding: 10px;
+  overflow-y: auto;
+  color: #10b981;
+  font-size: var(--code-font-size);
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.terminal-bar {
+  display: flex;
+  background-color: #111;
+  border-top: 1px solid #222;
+  padding: 6px;
+  gap: 6px;
+}
+
+.terminal-input-cmd {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: var(--code-font-size);
+  outline: none;
+}
+
+/* Módulo 4: Ajustes */
+.settings-section {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  padding: 14px;
+  margin-bottom: 14px;
+}
+
+.settings-label {
+  font-size: calc(var(--base-font-size) * 0.9);
+  color: var(--text-muted);
+  margin-bottom: 6px;
+  display: block;
+}
+
+.size-pill-group {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.size-pill {
+  flex: 1;
+  background-color: var(--bg-surface-elevated);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-main);
+  padding: 6px 0;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-align: center;
+  cursor: pointer;
+}
+
+.size-pill.active {
+  background: var(--accent-indigo);
+  border-color: var(--accent-indigo);
+  color: #fff;
+}
+
+/* Bottom Navigation */
+nav.app-navbar {
+  background-color: var(--bg-surface);
+  border-top: 1px solid var(--border-subtle);
+  display: flex;
+  justify-content: space-around;
+  padding: 6px 0;
+  flex-shrink: 0;
+}
+
+.nav-tab-btn {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-size: 0.72rem;
+  gap: 3px;
+  padding: 6px 14px;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+
+.nav-tab-btn.active {
+  color: var(--accent-cyan);
+  font-weight: 700;
+}
+
+.nav-tab-icon {
+  font-size: 1.25rem;
+}

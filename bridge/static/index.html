@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Antigravity Mobile Bridge</title>
+    <meta name="theme-color" content="#121214">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚡</text></svg>">
+    <style>
+        :root {
+            --bg-primary: #0f1012;
+            --bg-surface: #18191c;
+            --bg-surface-elevated: #222428;
+            --border: #2e3138;
+            --accent: #4f8cff;
+            --accent-gradient: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+            --text-primary: #f3f4f6;
+            --text-secondary: #9ca3af;
+            --text-muted: #6b7280;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --font-mono: 'Consolas', 'Courier New', monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Top Header */
+        header {
+            background-color: var(--bg-surface);
+            border-bottom: 1px solid var(--border);
+            padding: 10px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            z-index: 10;
+        }
+
+        .header-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 700;
+            font-size: 1.05rem;
+            background: var(--accent-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .badge-status {
+            font-size: 0.75rem;
+            padding: 4px 8px;
+            border-radius: 9999px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-weight: 500;
+            background-color: rgba(239, 68, 68, 0.15);
+            color: var(--danger);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .badge-status.online {
+            background-color: rgba(16, 185, 129, 0.15);
+            color: var(--success);
+            border-color: rgba(16, 185, 129, 0.3);
+        }
+
+        .badge-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background-color: currentColor;
+        }
+
+        /* Tab Content Containers */
+        main {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .tab-panel {
+            position: absolute;
+            inset: 0;
+            display: none;
+            flex-direction: column;
+            padding: 14px;
+            overflow-y: auto;
+        }
+
+        .tab-panel.active {
+            display: flex;
+        }
+
+        /* Chat Panel */
+        #chat-panel {
+            padding: 0;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .msg-bubble {
+            max-width: 88%;
+            padding: 10px 14px;
+            border-radius: 12px;
+            font-size: 0.92rem;
+            line-height: 1.45;
+            word-break: break-word;
+        }
+
+        .msg-user {
+            align-self: flex-end;
+            background: var(--accent-gradient);
+            color: #fff;
+            border-bottom-right-radius: 2px;
+        }
+
+        .msg-assistant {
+            align-self: flex-start;
+            background-color: var(--bg-surface-elevated);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+            border-bottom-left-radius: 2px;
+        }
+
+        .msg-tool {
+            align-self: flex-start;
+            background-color: rgba(245, 158, 11, 0.1);
+            color: var(--warning);
+            border: 1px dashed rgba(245, 158, 11, 0.4);
+            font-size: 0.8rem;
+            font-family: var(--font-mono);
+            max-width: 95%;
+        }
+
+        .chat-input-bar {
+            background-color: var(--bg-surface);
+            border-top: 1px solid var(--border);
+            padding: 10px 14px;
+            display: flex;
+            gap: 8px;
+        }
+
+        .chat-input {
+            flex: 1;
+            background-color: var(--bg-surface-elevated);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 10px 16px;
+            color: #fff;
+            font-size: 0.95rem;
+            outline: none;
+        }
+
+        .chat-input:focus {
+            border-color: var(--accent);
+        }
+
+        .btn-send {
+            background: var(--accent-gradient);
+            border: none;
+            border-radius: 50%;
+            width: 42px;
+            height: 42px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: #fff;
+            font-size: 1.1rem;
+        }
+
+        /* Terminal Panel */
+        .terminal-container {
+            background-color: #000;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            font-family: var(--font-mono);
+        }
+
+        .terminal-header {
+            background-color: #1a1a1a;
+            padding: 6px 12px;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            border-bottom: 1px solid #2a2a2a;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .terminal-output {
+            flex: 1;
+            padding: 10px;
+            overflow-y: auto;
+            color: #22c55e;
+            font-size: 0.82rem;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        .terminal-input-bar {
+            padding: 8px;
+            background-color: #111;
+            border-top: 1px solid #2a2a2a;
+            display: flex;
+            gap: 6px;
+        }
+
+        .terminal-input {
+            flex: 1;
+            background-color: transparent;
+            border: none;
+            outline: none;
+            color: #fff;
+            font-family: var(--font-mono);
+            font-size: 0.88rem;
+        }
+
+        .btn-run {
+            background-color: #2563eb;
+            color: #fff;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        /* Cloud Repos Panel */
+        .repo-card {
+            background-color: var(--bg-surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 10px;
+        }
+
+        .repo-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 600;
+            color: var(--accent);
+        }
+
+        .repo-card-desc {
+            font-size: 0.82rem;
+            color: var(--text-secondary);
+            margin: 6px 0;
+        }
+
+        .btn-small {
+            background-color: var(--bg-surface-elevated);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            padding: 5px 10px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            margin-right: 6px;
+        }
+
+        .file-viewer {
+            background-color: #050505;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 10px;
+            font-family: var(--font-mono);
+            font-size: 0.78rem;
+            max-height: 250px;
+            overflow: auto;
+            white-space: pre-wrap;
+            margin-top: 8px;
+            color: #d1d5db;
+        }
+
+        /* Bottom Nav Bar */
+        nav {
+            background-color: var(--bg-surface);
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: space-around;
+            padding: 6px 0;
+            z-index: 10;
+        }
+
+        .nav-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-size: 0.72rem;
+            gap: 4px;
+            padding: 6px 12px;
+            cursor: pointer;
+            transition: color 0.15s;
+        }
+
+        .nav-btn.active {
+            color: var(--accent);
+            font-weight: 600;
+        }
+
+        .nav-icon {
+            font-size: 1.25rem;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="header-title">
+            <span>⚡</span> Antigravity Bridge
+        </div>
+        <div id="status-badge" class="badge-status">
+            <span class="badge-dot"></span>
+            <span id="status-text">Desconectado</span>
+        </div>
+    </header>
+
+    <main>
+        <!-- Panel 1: Chat Gemini & Cloud Repos -->
+        <section id="chat-panel" class="tab-panel active">
+            <div class="chat-messages" id="chat-msgs">
+                <div class="msg-bubble msg-assistant">
+                    👋 <b>Antigravity Bridge activo.</b><br>
+                    Puedes pedirme leer y analizar tus repositorios en la nube (ej: <i>"analiza el CMakeLists.txt de yabausevita"</i>) o darme instrucciones para tu PC.
+                </div>
+            </div>
+            <div class="chat-input-bar">
+                <input type="text" id="chat-input" class="chat-input" placeholder="Pregunta a Gemini sobre tus repos o PC..." onkeydown="if(event.key==='Enter') sendChatPrompt()">
+                <button class="btn-send" onclick="sendChatPrompt()">➤</button>
+            </div>
+        </section>
+
+        <!-- Panel 2: Terminal Remota PC -->
+        <section id="term-panel" class="tab-panel">
+            <div class="terminal-container">
+                <div class="terminal-header">
+                    <span>PowerShell Remoto (PC Windows)</span>
+                    <span id="pc-host">localhost</span>
+                </div>
+                <div class="terminal-output" id="term-output">PS > Listo para recibir comandos desde el celular...</div>
+                <div class="terminal-input-bar">
+                    <span style="color: #22c55e;">PS&gt;</span>
+                    <input type="text" id="term-input" class="terminal-input" placeholder="ej: git status, dir, adb devices..." onkeydown="if(event.key==='Enter') sendTerminalCmd()">
+                    <button class="btn-run" onclick="sendTerminalCmd()">Ejecutar</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Panel 3: Repositorios Cloud (Zero-Download) -->
+        <section id="repos-panel" class="tab-panel">
+            <h3 style="margin-bottom: 12px; font-size: 1rem; color: #fff;">Repositorios en la Nube (zero-phoenix)</h3>
+            <div id="repos-list">
+                <div style="color: var(--text-muted); font-size: 0.85rem;">Cargando repositorios desde GitHub...</div>
+            </div>
+        </section>
+
+        <!-- Panel 4: Telemetría / Ajustes -->
+        <section id="settings-panel" class="tab-panel">
+            <h3 style="margin-bottom: 12px; font-size: 1rem; color: #fff;">Estado del Sistema</h3>
+            <div class="repo-card">
+                <div style="font-size: 0.85rem; line-height: 1.8;">
+                    <b>Servidor PC:</b> <span id="info-host">-</span><br>
+                    <b>Workspace:</b> <span id="info-ws" style="font-family: var(--font-mono); font-size: 0.75rem;">-</span><br>
+                    <b>Gemini API:</b> <span id="info-gemini">-</span><br>
+                    <b>GitHub Auth:</b> <span id="info-github">-</span>
+                </div>
+            </div>
+            <div style="margin-top: 15px;">
+                <label style="font-size: 0.8rem; color: var(--text-secondary); display: block; margin-bottom: 6px;">Token de Conexión:</label>
+                <input type="text" id="token-input" class="chat-input" style="width: 100%; border-radius: 6px; font-family: var(--font-mono);" placeholder="Token de acceso">
+                <button class="btn-run" style="margin-top: 8px; width: 100%; padding: 8px;" onclick="saveToken()">Guardar y Reconectar</button>
+            </div>
+        </section>
+    </main>
+
+    <!-- Bottom Navigation -->
+    <nav>
+        <button class="nav-btn active" onclick="switchTab('chat-panel', this)">
+            <span class="nav-icon">💬</span>
+            <span>Gemini</span>
+        </button>
+        <button class="nav-btn" onclick="switchTab('term-panel', this)">
+            <span class="nav-icon">💻</span>
+            <span>Terminal</span>
+        </button>
+        <button class="nav-btn" onclick="switchTab('repos-panel', this); loadRepos();">
+            <span class="nav-icon">☁️</span>
+            <span>Repos</span>
+        </button>
+        <button class="nav-btn" onclick="switchTab('settings-panel', this); loadStatus();">
+            <span class="nav-icon">⚙️</span>
+            <span>Estado</span>
+        </button>
+    </nav>
+
+    <script>
+        // Obtener token desde URL o localStorage
+        const urlParams = new URLSearchParams(window.location.search);
+        let authToken = urlParams.get('token') || localStorage.getItem('antigravity_token') || 'antigravity-secret-key';
+        document.getElementById('token-input').value = authToken;
+
+        let ws = null;
+
+        function saveToken() {
+            const val = document.getElementById('token-input').value.trim();
+            if (val) {
+                authToken = val;
+                localStorage.setItem('antigravity_token', val);
+                connectWebSocket();
+                loadStatus();
+            }
+        }
+
+        // Navegación de pestañas
+        function switchTab(tabId, btn) {
+            document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            btn.classList.add('active');
+        }
+
+        // Conexión WebSocket
+        function connectWebSocket() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}/ws/stream?token=${encodeURIComponent(authToken)}`;
+
+            if (ws) {
+                try { ws.close(); } catch(e) {}
+            }
+
+            ws = new WebSocket(wsUrl);
+
+            ws.onopen = () => {
+                const badge = document.getElementById('status-badge');
+                badge.classList.add('online');
+                document.getElementById('status-text').innerText = 'Enlazado (PC)';
+            };
+
+            ws.onclose = () => {
+                const badge = document.getElementById('status-badge');
+                badge.classList.remove('online');
+                document.getElementById('status-text').innerText = 'Desconectado';
+                setTimeout(connectWebSocket, 3000);
+            };
+
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                handleWsMessage(data);
+            };
+        }
+
+        function handleWsMessage(data) {
+            const msgs = document.getElementById('chat-msgs');
+            const term = document.getElementById('term-output');
+
+            if (data.event === 'stdout_chunk') {
+                term.textContent += data.text;
+                term.scrollTop = term.scrollHeight;
+            } else if (data.event === 'exec_end') {
+                term.textContent += `\n[Comando finalizado con código ${data.exit_code}]\n`;
+                if (data.stderr) term.textContent += `STDERR:\n${data.stderr}\n`;
+                term.scrollTop = term.scrollHeight;
+            } else if (data.event === 'chat_thinking') {
+                appendChatMessage('assistant', '<i>Pensando y consultando herramientas...</i>', 'thinking-bubble');
+            } else if (data.event === 'chat_tool_call') {
+                appendChatMessage('tool', `⚡ Cloud Tool: ${data.tool}(${JSON.stringify(data.args)})`);
+            } else if (data.event === 'chat_response') {
+                const thinking = document.getElementById('thinking-bubble');
+                if (thinking) thinking.remove();
+                appendChatMessage('assistant', data.text.replace(/\n/g, '<br>'));
+            } else if (data.event === 'chat_error') {
+                const thinking = document.getElementById('thinking-bubble');
+                if (thinking) thinking.remove();
+                appendChatMessage('assistant', `<span style="color: var(--danger);">[Error] ${data.message}</span>`);
+            }
+        }
+
+        function appendChatMessage(role, html, id = null) {
+            const container = document.getElementById('chat-msgs');
+            const div = document.createElement('div');
+            div.className = `msg-bubble msg-${role}`;
+            if (id) div.id = id;
+            div.innerHTML = html;
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function sendChatPrompt() {
+            const input = document.getElementById('chat-input');
+            const prompt = input.value.trim();
+            if (!prompt || !ws || ws.readyState !== WebSocket.OPEN) return;
+
+            appendChatMessage('user', prompt);
+            ws.send(JSON.stringify({ type: 'chat', prompt: prompt }));
+            input.value = '';
+        }
+
+        function sendTerminalCmd() {
+            const input = document.getElementById('term-input');
+            const cmd = input.value.trim();
+            if (!cmd || !ws || ws.readyState !== WebSocket.OPEN) return;
+
+            const term = document.getElementById('term-output');
+            term.textContent += `\n\nPS > ${cmd}\n`;
+            ws.send(JSON.stringify({ type: 'exec', command: cmd }));
+            input.value = '';
+        }
+
+        // Cargar estado de la PC
+        async function loadStatus() {
+            try {
+                const res = await fetch(`/api/status?token=${encodeURIComponent(authToken)}`);
+                if (res.ok) {
+                    const d = await res.json();
+                    document.getElementById('info-host').innerText = d.hostname + ` (${d.os})`;
+                    document.getElementById('pc-host').innerText = d.hostname;
+                    document.getElementById('info-ws').innerText = d.workspace;
+                    document.getElementById('info-gemini').innerText = d.gemini_configured ? 'Configurada' : 'No detectada';
+                    document.getElementById('info-github').innerText = d.github_authenticated ? 'Autenticado' : 'No autenticado';
+                }
+            } catch (e) {}
+        }
+
+        // Cargar repositorios en la nube
+        async function loadRepos() {
+            const container = document.getElementById('repos-list');
+            try {
+                const res = await fetch(`/api/repos?token=${encodeURIComponent(authToken)}`);
+                const data = await res.json();
+                if (data.repositories) {
+                    container.innerHTML = '';
+                    data.repositories.forEach(r => {
+                        const card = document.createElement('div');
+                        card.className = 'repo-card';
+                        card.innerHTML = `
+                            <div class="repo-card-header">
+                                <span>${r.name}</span>
+                                <span style="font-size: 0.7rem; color: var(--text-muted);">${r.private ? '🔒 Privado' : '🌐 Público'}</span>
+                            </div>
+                            <div class="repo-card-desc">${r.description || 'Sin descripción'}</div>
+                            <button class="btn-small" onclick="exploreTree('${r.name}')">Ver Árbol Cloud</button>
+                            <button class="btn-small" onclick="askAboutRepo('${r.name}')">Preguntar a Gemini</button>
+                            <div id="tree-${r.name}" style="display:none; margin-top:8px;"></div>
+                        `;
+                        container.appendChild(card);
+                    });
+                }
+            } catch(e) {
+                container.innerHTML = '<div style="color:var(--danger)">Error cargando repositorios.</div>';
+            }
+        }
+
+        async function exploreTree(repoName) {
+            const div = document.getElementById(`tree-${repoName}`);
+            if (div.style.display === 'block') {
+                div.style.display = 'none';
+                return;
+            }
+            div.style.display = 'block';
+            div.innerHTML = '<span style="color:var(--text-muted); font-size:0.75rem;">Obteniendo árbol en RAM...</span>';
+
+            try {
+                const res = await fetch(`/api/tree?repo=${repoName}&token=${encodeURIComponent(authToken)}`);
+                const d = await res.json();
+                if (d.files) {
+                    div.innerHTML = `<div style="font-size:0.75rem; color:var(--text-muted); margin-bottom:4px;">Archivos (${d.total_files}):</div>`;
+                    const fileList = document.createElement('div');
+                    fileList.style.maxHeight = '140px';
+                    fileList.style.overflowY = 'auto';
+                    d.files.slice(0, 15).forEach(f => {
+                        const item = document.createElement('div');
+                        item.style.padding = '3px 0';
+                        item.style.fontSize = '0.75rem';
+                        item.innerHTML = `<a href="#" onclick="viewCloudFile('${repoName}', '${f.path}'); return false;" style="color:var(--accent); text-decoration:none;">📄 ${f.path}</a>`;
+                        fileList.appendChild(item);
+                    });
+                    div.appendChild(fileList);
+                }
+            } catch(e) {
+                div.innerHTML = '<span style="color:var(--danger)">Error al obtener árbol.</span>';
+            }
+        }
+
+        async function viewCloudFile(repoName, filePath) {
+            switchTab('chat-panel', document.querySelectorAll('.nav-btn')[0]);
+            appendChatMessage('user', `Lee y explícame el archivo remoto <code>${filePath}</code> del repositorio <code>${repoName}</code>`);
+            ws.send(JSON.stringify({
+                type: 'chat',
+                prompt: `Por favor lee el archivo '${filePath}' del repositorio '${repoName}' en la nube y haz un resumen técnico de su propósito y estructura.`
+            }));
+        }
+
+        function askAboutRepo(repoName) {
+            switchTab('chat-panel', document.querySelectorAll('.nav-btn')[0]);
+            document.getElementById('chat-input').value = `Analiza la estructura del repositorio en la nube ${repoName} y dime cuáles son sus componentes principales.`;
+            sendChatPrompt();
+        }
+
+        // Iniciar
+        connectWebSocket();
+        loadStatus();
+    </script>
+</body>
+</html>

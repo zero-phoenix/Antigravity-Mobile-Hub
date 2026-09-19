@@ -1,0 +1,86 @@
+name: Build & Release Android APK
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Java JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+
+      - name: Synchronize Web Assets to Android Project
+        run: |
+          mkdir -p android/app/src/main/assets
+          cp -r android-app/* android/app/src/main/assets/
+          echo "Assets sincronizados en APK."
+
+      - name: Build Android Release APK
+        run: |
+          cd android
+          gradle wrapper --gradle-version 8.2
+          chmod +x gradlew
+          ./gradlew assembleRelease --no-daemon
+
+      - name: Prepare APK Asset
+        id: prepare_apk
+        run: |
+          TAG_NAME="${GITHUB_REF_NAME:-v1.0.0}"
+          APK_SRC=$(find android/app/build/outputs/apk/release -name "*.apk" | head -n 1)
+          if [ -z "$APK_SRC" ]; then
+            APK_SRC=$(find android/app/build/outputs/apk/debug -name "*.apk" | head -n 1)
+          fi
+          APK_DEST="Antigravity-Mobile-Hub-${TAG_NAME}.apk"
+          cp "$APK_SRC" "$APK_DEST"
+          echo "apk_path=$APK_DEST" >> $GITHUB_OUTPUT
+          echo "tag=$TAG_NAME" >> $GITHUB_OUTPUT
+          ls -lh "$APK_DEST"
+
+      - name: Create GitHub Release with APK
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          name: "Antigravity Mobile Hub ${{ steps.prepare_apk.outputs.tag }}"
+          files: ${{ steps.prepare_apk.outputs.apk_path }}
+          draft: false
+          prerelease: false
+          body: |
+            ## ⚡ Antigravity Mobile Hub ${{ steps.prepare_apk.outputs.tag }} — Release Oficial para Android
+
+            Aplicación Android de ingeniería de software conectada simultáneamente a **GitHub** (`zero-phoenix`), **Google Gemini** y **Google Antigravity en la PC**.
+
+            ### 📲 Descarga e Instalación
+            - **Descarga el archivo adjunto**: [`${{ steps.prepare_apk.outputs.apk_path }}`](https://github.com/${{ github.repository }}/releases/download/${{ steps.prepare_apk.outputs.tag }}/${{ steps.prepare_apk.outputs.apk_path }})
+            - En tu celular Android, abre el archivo descargado y presiona **Instalar** (permite "Instalar aplicaciones de fuentes desconocidas" si tu teléfono lo solicita).
+
+            ---
+
+            ### 🚀 Características de la Versión
+            - **💎 Interfaz Cyber-Dark OLED**: Optimizada para bajo consumo de batería con control dinámico de tamaño de letra e interfaz (Compacto, Estándar, Grande, Extra).
+            - **🧠 Control Total de Modelos Gemini**: Selector instantáneo de `gemini-2.5-flash`, `gemini-2.5-pro` y `gemini-3.8-flash`.
+            - **⚡ Presupuesto de Razonamiento (Thinking Budget)**: Ajuste entre modo *Rápido (0)*, *Analítico (2k)* y *Deep Research (8k)*.
+            - **🛡️ Grounding Estricto Anti-Alucinaciones**: Fuerza a Gemini a basarse exclusivamente en archivos reales de tus repositorios y salidas del sistema, con citas obligatorias de línea.
+            - **☁️ Explorador Universal de Repositorios (Zero-Download)**: Lectura en memoria RAM sin descarga de tus 10 proyectos privados (`zero-phoenix/*`) y de cualquier repositorio de terceros (`vitasdk/*`, etc.).
+            - **💻 Terminal Remota y Delegación a PC**: Control de Windows PowerShell en tiempo real y ejecución de comandos remotos.
+            - **🛡️ Auditoría Popperiana Superada**: Blindaje contra inyecciones XSS, soporte Cleartext para red local Wi-Fi y carga offline desde assets nativos.

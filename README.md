@@ -17,7 +17,7 @@
 El producto principal es el binario compilado listo para instalar:
 
 1. Ve a la sección de **[Releases](https://github.com/zero-phoenix/Antigravity-Mobile-Hub/releases)** de este repositorio.
-2. Descarga el archivo **`Antigravity-Mobile-Hub-v1.0.0.apk`** en tu celular.
+2. Descarga el archivo **`Antigravity-Mobile-Hub-v1.1.1.apk`** (Versión Simplificada & Popperiana) en tu celular.
 3. Abre el archivo descargado en tu teléfono y pulsa **Instalar**.
 4. ¡Listo! La app se instalará con su propio icono en el launcher de Android y se ejecutará a pantalla completa sin barras de navegador.
 

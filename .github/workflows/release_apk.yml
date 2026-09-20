@@ -64,7 +64,7 @@ jobs:
           body: |
             ## ⚡ Antigravity Mobile Hub ${{ steps.prepare_apk.outputs.tag }} — Release Oficial para Android
 
-            Aplicación Android de ingeniería de software conectada simultáneamente a **GitHub** (`zero-phoenix`), **Google Gemini** y **Google Antigravity en la PC**.
+            Aplicación Android de ingeniería agéntica conectada simultáneamente a **GitHub** (`zero-phoenix`), **Google Gemini 2.0** y **Google Antigravity en la PC**.
 
             ### 📲 Descarga e Instalación
             - **Descarga el archivo adjunto**: [`${{ steps.prepare_apk.outputs.apk_path }}`](https://github.com/${{ github.repository }}/releases/download/${{ steps.prepare_apk.outputs.tag }}/${{ steps.prepare_apk.outputs.apk_path }})
@@ -72,11 +72,11 @@ jobs:
 
             ---
 
-            ### 🚀 Características de la Versión
-            - **💎 Interfaz Cyber-Dark OLED**: Optimizada para bajo consumo de batería con control dinámico de tamaño de letra e interfaz (Compacto, Estándar, Grande, Extra).
-            - **🧠 Control Total de Modelos Gemini**: Selector instantáneo de `gemini-2.5-flash`, `gemini-2.5-pro` y `gemini-3.8-flash`.
-            - **⚡ Presupuesto de Razonamiento (Thinking Budget)**: Ajuste entre modo *Rápido (0)*, *Analítico (2k)* y *Deep Research (8k)*.
-            - **🛡️ Grounding Estricto Anti-Alucinaciones**: Fuerza a Gemini a basarse exclusivamente en archivos reales de tus repositorios y salidas del sistema, con citas obligatorias de línea.
-            - **☁️ Explorador Universal de Repositorios (Zero-Download)**: Lectura en memoria RAM sin descarga de tus 10 proyectos privados (`zero-phoenix/*`) y de cualquier repositorio de terceros (`vitasdk/*`, etc.).
-            - **💻 Terminal Remota y Delegación a PC**: Control de Windows PowerShell en tiempo real y ejecución de comandos remotos.
-            - **🛡️ Auditoría Popperiana Superada**: Blindaje contra inyecciones XSS, soporte Cleartext para red local Wi-Fi y carga offline desde assets nativos.
+            ### 🚀 Novedades de la Versión v2.1.0
+            - **🔑 Autenticación por Código de Aplicación (Cero API Keys)**: Olvídate de ingresar claves a mano. Inicia sesión con el **PIN de Emparejamiento de 6 dígitos** con tu PC o mediante **GitHub Device Code Flow**.
+            - **⚡ Gemini 2.0 Flash Oficial (Ultra Rápido)**: Modelo insignia de Google con latencia ultrabaja (<400ms) y streaming token a token en tiempo real sin esperas.
+            - **🌐 Cuentas Sincronizadas**: Detección y vinculación automática de tus cuentas activas de Google (`david.chavez.nge@gmail.com`) y GitHub (`@zero-phoenix`).
+            - **🧠 Control de Modelos y Thinking Budget**: Soporte para `Gemini 2.0 Flash`, `Gemini 2.0 Flash Lite`, `Gemini 1.5 Flash` y `Gemini 1.5 Pro`.
+            - **☁️ Explorador Universal de Repositorios (Zero-Download)**: Lectura y edición directa de archivos con commits en RAM sin gastar memoria física.
+            - **💻 Terminal PowerShell Remota**: Ejecución de comandos en la PC con streaming en vivo.
+            - **🛡️ Auditoría Popperiana Completa**: Validación empírica en hardware Samsung Galaxy físico con Android 16.

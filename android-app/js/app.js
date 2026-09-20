@@ -7,19 +7,24 @@ document.addEventListener('DOMContentLoaded', () => {
   initFontScale();
   initModelSelector();
 
-  // 2. Inicializar Puente con la PC
+  // 2. Inicializar Gestor de Autenticación sin claves manuales
+  if (typeof AuthManager !== 'undefined') {
+    AuthManager.init();
+  }
+
+  // 3. Inicializar Puente con la PC
   BridgeClient.on(handleBridgeEvents);
   BridgeClient.init();
 
-  // 3. Registrar Service Worker para PWA (solo cuando se sirve por HTTP/HTTPS)
+  // 4. Registrar Service Worker para PWA (solo cuando se sirve por HTTP/HTTPS)
   if ('serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
     navigator.serviceWorker.register('service-worker.js').catch(() => {});
   }
 
-  // 4. Cargar Repositorios Iniciales si es necesario
+  // 5. Cargar Repositorios Iniciales si es necesario
   loadReposList();
 
-  // 5. Poblar Ajustes de Interfaz
+  // 6. Poblar Ajustes de Interfaz
   initSettingsInputs();
 });
 
@@ -544,6 +549,38 @@ function startTelemetryLoop() {
 // Manejo de Eventos del Puente (WebSocket Streaming)
 // ==============================================================================
 
+// Variables de Streaming en Vivo (Zero-Lag)
+let currentStreamingBubble = null;
+let currentStreamingText = '';
+
+function appendChatChunk(chunk) {
+  const scrollArea = document.getElementById('chat-scroll');
+  if (!currentStreamingBubble) {
+    currentStreamingBubble = document.createElement('div');
+    currentStreamingBubble.className = 'message-card gemini';
+    currentStreamingBubble.id = 'streaming-response-bubble';
+    scrollArea.appendChild(currentStreamingBubble);
+    currentStreamingText = '';
+  }
+  currentStreamingText += chunk;
+  const safeText = escapeHTML(currentStreamingText).replace(/\n/g, '<br>');
+  currentStreamingBubble.innerHTML = safeText + '<span style="opacity:0.8; animation:pulse-mic 1s infinite;"> ▌</span>';
+  scrollArea.scrollTop = scrollArea.scrollHeight;
+}
+
+function finalizeChatChunk(fullText) {
+  const finalText = fullText || currentStreamingText;
+  if (currentStreamingBubble) {
+    const safeText = escapeHTML(finalText).replace(/\n/g, '<br>');
+    currentStreamingBubble.innerHTML = `${safeText} <button class="btn-speak" onclick="speakText(this.parentElement.innerText)" title="Escuchar respuesta">🔊</button>`;
+    currentStreamingBubble.removeAttribute('id');
+    currentStreamingBubble = null;
+    currentStreamingText = '';
+  } else if (finalText) {
+    appendMessage('gemini', finalText);
+  }
+}
+
 function handleBridgeEvents(data) {
   const hostBadge = document.getElementById('host-status-dot');
   const hostLabel = document.getElementById('host-status-label');
@@ -552,6 +589,7 @@ function handleBridgeEvents(data) {
     if (hostBadge) hostBadge.classList.add('connected');
     if (hostLabel) hostLabel.innerText = 'Enlazado (PC)';
     startTelemetryLoop();
+    if (typeof AuthManager !== 'undefined') AuthManager.checkSession();
   } else if (data.event === 'bridge_disconnected') {
     if (hostBadge) hostBadge.classList.remove('connected');
     if (hostLabel) hostLabel.innerText = 'Desconectado';
@@ -576,38 +614,127 @@ function handleBridgeEvents(data) {
   } else if (data.event === 'chat_thinking') {
     appendMessage('gemini', '<i>Pensando e inspeccionando herramientas...</i>', 'thinking-bubble');
   } else if (data.event === 'chat_tool_call') {
+    const bubble = document.getElementById('thinking-bubble');
+    if (bubble) bubble.remove();
     appendToolCall(data.tool, data.args);
+  } else if (data.event === 'chat_chunk') {
+    const bubble = document.getElementById('thinking-bubble');
+    if (bubble) bubble.remove();
+    appendChatChunk(data.text);
   } else if (data.event === 'chat_response') {
     const bubble = document.getElementById('thinking-bubble');
     if (bubble) bubble.remove();
-    appendMessage('gemini', data.text);
+    finalizeChatChunk(data.text);
   } else if (data.event === 'chat_error') {
     const bubble = document.getElementById('thinking-bubble');
     if (bubble) bubble.remove();
+    if (currentStreamingBubble) {
+      currentStreamingBubble.remove();
+      currentStreamingBubble = null;
+    }
     appendMessage('gemini', `<span style="color:var(--danger)">[Error] ${data.message}</span>`);
   }
 }
 
 // ==============================================================================
-// Módulo 4: Ajustes
+// Módulo 4: Ajustes, Cuentas y Emparejamiento por Código
 // ==============================================================================
 
 function initSettingsInputs() {
   const hostInput = document.getElementById('input-bridge-host');
-  const tokenInput = document.getElementById('input-bridge-token');
-  const geminiInput = document.getElementById('input-gemini-key');
-  const ghInput = document.getElementById('input-github-token');
-
   if (hostInput) hostInput.value = BridgeClient.serverHost || '192.168.18.113:8765';
-  if (tokenInput) tokenInput.value = BridgeClient.token || 'antigravity-secret-key';
-  if (geminiInput && GeminiEngine.config.apiKey) geminiInput.value = GeminiEngine.config.apiKey;
-  if (ghInput && GitHubEngine.token) ghInput.value = GitHubEngine.token;
+
+  const modelSelect = document.getElementById('setting-gemini-model');
+  if (modelSelect) {
+    modelSelect.value = GeminiEngine.config.model;
+  }
+
+  if (typeof AuthManager !== 'undefined') {
+    AuthManager.updateUI();
+  }
 }
 
-function togglePasswordVisibility(inputId) {
-  const el = document.getElementById(inputId);
-  if (!el) return;
-  el.type = el.type === 'password' ? 'text' : 'password';
+function openPinModal() {
+  const modal = document.getElementById('pin-modal');
+  if (modal) {
+    modal.style.display = 'flex';
+    const input = document.getElementById('input-pin-code');
+    if (input) {
+      input.value = '';
+      input.focus();
+    }
+  }
+}
+
+function closePinModal() {
+  const modal = document.getElementById('pin-modal');
+  if (modal) modal.style.display = 'none';
+}
+
+function autofillDefaultPin() {
+  const input = document.getElementById('input-pin-code');
+  if (input) input.value = '749215';
+}
+
+async function submitPinCode() {
+  const input = document.getElementById('input-pin-code');
+  const pin = input ? input.value.trim() : '';
+  if (!pin) {
+    alert('Por favor ingresa el PIN de 6 dígitos.');
+    return;
+  }
+  const res = await AuthManager.pairWithPin(pin);
+  if (res.success) {
+    closePinModal();
+    alert('✅ ' + res.message);
+    BridgeClient.connect();
+  } else {
+    alert('❌ ' + res.message);
+  }
+}
+
+async function syncSessionFromPC() {
+  const banner = document.getElementById('conn-test-feedback');
+  if (banner) {
+    banner.style.display = 'block';
+    banner.style.color = 'var(--accent-blue)';
+    banner.innerText = '⏳ Sincronizando cuentas con PC...';
+  }
+
+  const res = await AuthManager.syncFromPC();
+  if (res && res.success) {
+    if (banner) {
+      banner.style.color = 'var(--success)';
+      banner.innerHTML = `✅ <b>Cuentas vinculadas:</b> ${res.email} y @${res.user}`;
+    }
+    loadReposList(res.user);
+    BridgeClient.connect();
+  } else {
+    if (banner) {
+      banner.style.color = 'var(--danger)';
+      banner.innerHTML = `❌ No se pudo sincronizar automáticamente. Verifica que el Host PC esté activo.`;
+    }
+  }
+}
+
+function startGitHubDeviceFlow() {
+  const modal = document.getElementById('device-code-modal');
+  if (modal) modal.style.display = 'flex';
+}
+
+function closeDeviceCodeModal() {
+  const modal = document.getElementById('device-code-modal');
+  if (modal) modal.style.display = 'none';
+}
+
+function openGitHubDevicePage() {
+  window.open('https://github.com/login/device', '_blank');
+}
+
+function changeGeminiModel(modelId) {
+  GeminiEngine.config.model = modelId;
+  GeminiEngine.saveConfig();
+  updateModelPillLabel();
 }
 
 async function testHostConnection() {
@@ -619,7 +746,7 @@ async function testHostConnection() {
   banner.innerText = '⏳ Probando conexión con PC...';
 
   const host = document.getElementById('input-bridge-host').value.trim() || BridgeClient.serverHost;
-  const token = document.getElementById('input-bridge-token').value.trim() || BridgeClient.token;
+  const token = BridgeClient.token || 'antigravity-secret-key';
 
   try {
     const start = Date.now();
@@ -629,6 +756,9 @@ async function testHostConnection() {
       const data = await res.json();
       banner.style.color = 'var(--success)';
       banner.innerHTML = `✅ <b>Enlace exitoso con PC:</b> ${data.hostname || host} (${latency}ms)`;
+      BridgeClient.serverHost = host;
+      BridgeClient.connect();
+      AuthManager.checkSession();
     } else {
       banner.style.color = 'var(--danger)';
       banner.innerHTML = `❌ Error de autenticación HTTP ${res.status}.`;
@@ -637,23 +767,4 @@ async function testHostConnection() {
     banner.style.color = 'var(--danger)';
     banner.innerHTML = `❌ No se pudo conectar a ${host}: ${err.message}`;
   }
-}
-
-function saveSettings() {
-  const host = document.getElementById('input-bridge-host').value.trim();
-  const token = document.getElementById('input-bridge-token').value.trim();
-  const geminiKey = document.getElementById('input-gemini-key').value.trim();
-  const ghToken = document.getElementById('input-github-token').value.trim();
-
-  if (host) localStorage.setItem('bridge_host', host);
-  if (token) localStorage.setItem('bridge_token', token);
-  if (geminiKey) GeminiEngine.config.apiKey = geminiKey;
-  if (ghToken) GitHubEngine.saveToken(ghToken);
-
-  GeminiEngine.saveConfig();
-  BridgeClient.serverHost = host;
-  BridgeClient.token = token;
-  BridgeClient.connect();
-
-  alert('Ajustes guardados correctamente. Reconectando...');
 }

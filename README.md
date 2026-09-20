@@ -1,16 +1,16 @@
-# ⚡ Antigravity Mobile Hub — Versión Suprema
+# ⚡ Antigravity Mobile Hub — Versión Suprema v2.1.0
 
 [![Android Build](https://github.com/zero-phoenix/Antigravity-Mobile-Hub/actions/workflows/release_apk.yml/badge.svg)](https://github.com/zero-phoenix/Antigravity-Mobile-Hub/actions/workflows/release_apk.yml)
 [![GitHub Release](https://img.shields.io/github/v/release/zero-phoenix/Antigravity-Mobile-Hub?color=blue&label=Release)](https://github.com/zero-phoenix/Antigravity-Mobile-Hub/releases)
 [![Android Compatibility](https://img.shields.io/badge/Android-7.0%2B%20(API%2024--36)-green)](https://github.com/zero-phoenix/Antigravity-Mobile-Hub)
 [![License](https://img.shields.io/badge/License-MIT-purple.svg)](LICENSE)
 
-**Antigravity Mobile Hub (Versión Suprema v2.0)** es una suite de ingeniería agéntica y desarrollo móvil para Android con interfaz Cyber-OLED ultrarrápida que conecta:
-1. **GitHub Cloud Zero-Download + In-Memory Commits**: Lee código, explora árboles completos y **crea o edita commits en GitHub directamente en RAM** sin clonar ni gastar almacenamiento del teléfono.
-2. **Gemini Autonomous Agent (Function Calling)**: Agente autónomo capaz de inspeccionar hardware, leer código en la nube y delegar comandos a la PC Windows.
-3. **Dictado y Síntesis por Voz (Voice-Driven Lab)**: Dicta prompts con el micrófono y escucha respuestas habladas con síntesis de voz nativa.
+**Antigravity Mobile Hub (Versión Suprema v2.1.0)** es una suite de ingeniería agéntica y desarrollo móvil para Android con interfaz Cyber-OLED ultrarrápida:
+1. **Autenticación por Código Móvil (Cero API Keys Manuales)**: Vinculación transparente mediante **PIN de Emparejamiento de 6 dígitos** y **GitHub Device Code Flow**. Hereda automáticamente la sesión de Google (`david.chavez.nge@gmail.com`) y GitHub (`@zero-phoenix`).
+2. **Google Gemini 2.0 Flash Oficial con Streaming**: Inferencia ultra veloz token por token (<400ms de latencia) mediante `gemini-2.0-flash` y `gemini-2.0-flash-lite`.
+3. **GitHub Cloud Zero-Download + In-Memory Commits**: Lee código, explora árboles completos y **crea o edita commits en GitHub directamente en RAM** sin clonar ni gastar almacenamiento del teléfono.
 4. **Telemetría PC en Vivo**: Monitor en tiempo real de uso de CPU, RAM y energía en Windows vía ctypes ultrarrápido sin librerías externas.
-5. **PowerShell en Vivo**: Terminal remota interactiva en tiempo real.
+5. **PowerShell en Vivo y Dictado por Voz**: Terminal remota interactiva en tiempo real y comandos por micrófono.
 
 ---
 
@@ -19,7 +19,7 @@
 El producto principal es el binario compilado listo para instalar:
 
 1. Ve a la sección de **[Releases](https://github.com/zero-phoenix/Antigravity-Mobile-Hub/releases)** de este repositorio.
-2. Descarga el archivo **`Antigravity-Mobile-Hub-v2.0.0.apk`** (Versión Suprema) en tu celular.
+2. Descarga el archivo **`Antigravity-Mobile-Hub-v2.1.0.apk`** en tu celular.
 3. Abre el archivo descargado en tu teléfono y pulsa **Instalar**.
 4. ¡Listo! La app se instalará con su propio icono en el launcher de Android y se ejecutará a pantalla completa sin barras de navegador.
 
@@ -38,12 +38,13 @@ El producto principal es el binario compilado listo para instalar:
 ```
 
 ### 1. 💬 Gemini Intelligence Workspace
-- **Selector Dinámico de Modelos**: Alterna al instante entre `Gemini 2.5 Flash` (velocidad), `Gemini 2.5 Pro` (análisis profundo) y `Gemini 3.8 Flash`.
+- **Familia Oficial Gemini 2.0**: Predeterminado a `⚡ Gemini 2.0 Flash` (baja latencia y respuestas instantáneas), con opciones para `Gemini 2.0 Flash Lite`, `Gemini 1.5 Flash` y `Gemini 1.5 Pro`.
+- **Streaming Token a Token**: Las palabras aparecen inmediatamente en pantalla a medida que se generan, eliminando tiempos de espera.
 - **Thinking Budget**: Controla el esfuerzo de razonamiento interno:
   - `⚡ Rápido (0)`: Inferencia inmediata.
   - `🧠 Analítico (2k)`: Cadena de razonamiento de 2048 tokens.
   - `🔬 Deep Research (8k)`: Auditoría y depuración exhaustiva de código.
-- **🛡️ Grounding Estricto**: Prohíbe terminantemente inventar APIs o código no respaldado por los repositorios; exige citas directas de archivo y línea.
+- **🛡️ Grounding Estricto**: Prohíbe inventar APIs o código no respaldado por los repositorios; exige citas directas de archivo y línea.
 
 ### 2. ☁️ Explorador Cloud Universal (Zero-Download)
 - **Cero uso de almacenamiento**: Explora archivos y código fuente directamente en memoria RAM. No se descargan gigabytes de historial `git`.

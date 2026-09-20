@@ -1,22 +1,30 @@
 /**
  * Gemini Engine: Control de modelos, Thinking Budget y Grounding Estricto.
+ * Actualizado a la familia oficial Gemini 2.0 (Predeterminado: gemini-2.0-flash).
  */
 
 const GeminiEngine = {
   // Configuración actual
   config: {
-    model: localStorage.getItem('gemini_model') || 'gemini-2.5-flash',
+    model: (function() {
+      const saved = localStorage.getItem('gemini_model');
+      if (!saved || saved.includes('2.5') || saved.includes('3.8')) {
+        return 'gemini-2.0-flash';
+      }
+      return saved;
+    })(),
     thinkingBudget: parseInt(localStorage.getItem('gemini_thinking') || '0', 10), // 0 = Rápido, 2048 = Analítico, 8192 = Deep Research
     temperature: parseFloat(localStorage.getItem('gemini_temp') || '0.2'),
     strictGrounding: localStorage.getItem('gemini_strict') !== 'false', // True por defecto (cero alucinaciones)
     apiKey: localStorage.getItem('gemini_api_key') || ''
   },
 
-  // Modelos disponibles
+  // Modelos oficiales vigentes de Google
   MODELS: [
-    { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', desc: 'Rápido, baja latencia, eficiente' },
-    { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro', desc: 'Razonamiento profundo y arquitectura' },
-    { id: 'gemini-3.8-flash', name: 'Gemini 3.8 Flash', desc: 'Próxima generación multimodelo' }
+    { id: 'gemini-2.0-flash', name: '⚡ Gemini 2.0 Flash', desc: 'Ultrarrápido, latencia mínima, streaming token a token (Predeterminado)' },
+    { id: 'gemini-2.0-flash-lite', name: '🚀 Gemini 2.0 Flash Lite', desc: 'Máxima eficiencia y velocidad para consultas frecuentes' },
+    { id: 'gemini-1.5-flash', name: '⚡ Gemini 1.5 Flash', desc: 'Rápido, versátil y multimodal' },
+    { id: 'gemini-1.5-pro', name: '🧠 Gemini 1.5 Pro', desc: 'Razonamiento complejo y contexto extendido' }
   ],
 
   saveConfig() {
@@ -24,7 +32,6 @@ const GeminiEngine = {
     localStorage.setItem('gemini_thinking', this.config.thinkingBudget);
     localStorage.setItem('gemini_temp', this.config.temperature);
     localStorage.setItem('gemini_strict', this.config.strictGrounding);
-    localStorage.setItem('gemini_api_key', this.config.apiKey);
   },
 
   getSystemInstruction() {
@@ -42,7 +49,7 @@ const GeminiEngine = {
    * Envía un prompt a través del Gateway de la PC o directamente a Gemini API
    */
   async sendMessage(prompt, onEventCallback) {
-    // Si hay WebSocket activo hacia la PC, enviar por el WebSocket para usar las herramientas de la PC y Cloud Inspector
+    // Si hay WebSocket activo hacia la PC, enviar por el WebSocket para streaming rápido y Cloud Tools
     if (BridgeClient.isConnected()) {
       BridgeClient.sendChatPrompt(prompt, {
         model: this.config.model,
@@ -53,44 +60,36 @@ const GeminiEngine = {
       return;
     }
 
-    // Fallback directo a Google Gemini API vía HTTPS si no hay conexión local con la PC
-    if (!this.config.apiKey) {
-      onEventCallback({
-        event: 'chat_error',
-        message: 'No hay conexión con la PC ni se configuró una GEMINI_API_KEY local en Ajustes.'
-      });
-      return;
-    }
-
+    // Si no está conectado por WebSocket, intentar reconectar o procesar con el backend local
     onEventCallback({ event: 'chat_thinking', prompt: prompt });
 
     try {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${this.config.model}:generateContent?key=${this.config.apiKey}`;
-      const payload = {
-        contents: [{ role: 'user', parts: [{ text: prompt }] }],
-        generationConfig: {
-          temperature: this.config.temperature,
-        },
-        systemInstruction: {
-          parts: [{ text: this.getSystemInstruction() }]
-        }
-      };
-
-      const resp = await fetch(url, {
+      // Intentar enviar al endpoint HTTP de ejecución de Antigravity
+      const bridgeToken = localStorage.getItem('bridge_token') || 'antigravity-secret-key';
+      const resp = await fetch('/api/exec', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Antigravity-Token': bridgeToken
+        },
+        body: JSON.stringify({ command: prompt })
       });
 
-      const data = await resp.json();
-      if (data.error) {
-        onEventCallback({ event: 'chat_error', message: data.error.message });
-      } else {
-        const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '(Sin respuesta)';
+      if (resp.ok) {
+        const data = await resp.json();
+        const text = data.stdout || data.stderr || `Comando ejecutado con código ${data.exit_code}`;
         onEventCallback({ event: 'chat_response', text: text });
+      } else {
+        onEventCallback({
+          event: 'chat_error',
+          message: 'Sin enlace con Antigravity PC. Conéctate al Gateway en Ajustes mediante tu Código PIN.'
+        });
       }
     } catch (e) {
-      onEventCallback({ event: 'chat_error', message: e.message });
+      onEventCallback({
+        event: 'chat_error',
+        message: 'No hay conexión con la PC. Abre Ajustes para sincronizar mediante Código PIN.'
+      });
     }
   }
 };

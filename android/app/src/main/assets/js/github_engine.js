@@ -35,11 +35,7 @@ const GitHubEngine = {
   },
 
   getApiUrl(endpoint) {
-    if (window.location.protocol.startsWith('http')) {
-      return endpoint;
-    }
-    const host = BridgeClient.serverHost || '192.168.18.113:8765';
-    return `http://${host}${endpoint}`;
+    return BridgeClient.apiUrl(endpoint);
   },
 
   async getHeaders() {

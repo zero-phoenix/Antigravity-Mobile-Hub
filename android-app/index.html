@@ -17,7 +17,7 @@
     <div class="brand-wrapper">
       <span class="brand-icon">⚡</span>
       <span class="brand-title">Antigravity</span>
-      <span class="badge-tag">Hub Supremo v2.2</span>
+      <span class="badge-tag">Hub Supremo v2.3</span>
     </div>
     <div class="header-actions">
       <div class="host-badge" id="host-badge" onclick="switchTab('view-settings', document.getElementById('tab-btn-settings'))" title="Toca para configurar conexión">
@@ -66,6 +66,49 @@
         <button class="btn-voice-mic" id="btn-mic" onclick="toggleVoiceRecognition()" title="Dictar por voz">🎙️</button>
         <input type="text" id="gemini-prompt-input" class="composer-input" placeholder="Pregunta, instruye o dicta por voz..." onkeydown="if(event.key==='Enter') handleSendPrompt()">
         <button class="btn-icon-send" onclick="handleSendPrompt()">➤</button>
+      </div>
+    </section>
+
+    <!-- VISTA: Conversaciones (113 Sesiones Antigravity PC & Gemini Flash) -->
+    <section id="view-conversations" class="view-pane">
+      <div class="repo-browser-header" style="margin-bottom:6px;">
+        <div>
+          <h3 style="font-size:1.05rem; font-weight:700; color:#fff;">Historial de Conversaciones</h3>
+          <span style="font-size:0.75rem; color:var(--text-muted);">113 Sesiones Antigravity PC & Gemini Flash</span>
+        </div>
+        <button class="btn-action-small" onclick="loadConversationsList()">🔄 Actualizar</button>
+      </div>
+
+      <div style="display:flex; gap:6px; margin-bottom:8px;">
+        <button id="btn-filter-agy" class="btn-action-small" style="flex:1; background:var(--accent-indigo); font-weight:700;" onclick="switchConvFilter('antigravity')">⚡ Antigravity (113)</button>
+        <button id="btn-filter-gemini" class="btn-action-small" style="flex:1; background:var(--bg-surface-elevated);" onclick="switchConvFilter('gemini')">💬 Gemini Flash</button>
+      </div>
+
+      <div style="margin-bottom:8px;">
+        <input type="text" id="conv-search-input" class="composer-input" style="font-size:0.82rem; padding:8px 12px; width:100%; border-radius:6px;" placeholder="Buscar conversaciones por título..." oninput="filterConversationsUI(this.value)">
+      </div>
+
+      <div class="repo-list-container" id="conv-list-container">
+        <div style="text-align:center; padding:25px; color:var(--text-muted);">
+          Cargando conversaciones desde la PC...
+        </div>
+      </div>
+    </section>
+
+    <!-- VISTA: Proyectos de Desarrollo en la PC -->
+    <section id="view-projects" class="view-pane">
+      <div class="repo-browser-header" style="margin-bottom:6px;">
+        <div>
+          <h3 style="font-size:1.05rem; font-weight:700; color:#fff;">Proyectos PC en Vivo</h3>
+          <span style="font-size:0.75rem; color:var(--text-muted);">Repositorios locales activos en Windows</span>
+        </div>
+        <button class="btn-action-small" onclick="loadProjectsList()">🔄 Actualizar</button>
+      </div>
+
+      <div class="repo-list-container" id="projects-list-container">
+        <div style="text-align:center; padding:25px; color:var(--text-muted);">
+          Escaneando proyectos en la PC...
+        </div>
       </div>
     </section>
 
@@ -281,11 +324,33 @@
     </div>
   </div>
 
-  <!-- Bottom Navigation Bar -->
+  <!-- Modal Visor de Conversación Completa -->
+  <div class="modal-overlay" id="conv-reader-modal" style="display:none;" onclick="if(event.target===this) closeConvReader()">
+    <div class="modal-card" style="max-height:88vh; display:flex; flex-direction:column; padding:14px; width:92%; max-width:650px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border-subtle); padding-bottom:8px; margin-bottom:8px;">
+        <div style="overflow:hidden; padding-right:8px;">
+          <h4 id="conv-reader-title" style="font-size:0.92rem; font-weight:700; color:#fff; margin:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">Conversación</h4>
+          <span id="conv-reader-meta" style="font-size:0.72rem; color:var(--text-muted);">Cargando...</span>
+        </div>
+        <button class="btn-action-small" style="background:transparent; border:none; font-size:1.3rem; color:var(--text-muted); cursor:pointer; padding:2px 8px;" onclick="closeConvReader()">✕</button>
+      </div>
+      <div id="conv-reader-messages" class="chat-scroll-area" style="flex:1; overflow-y:auto; padding:6px 0; max-height:65vh;"></div>
+    </div>
+  </div>
+
+  <!-- Bottom Navigation Bar (6 Pestañas) -->
   <nav class="app-navbar">
     <button class="nav-tab-btn active" id="tab-btn-gemini" onclick="switchTab('view-gemini', this)">
       <span class="nav-tab-icon">💬</span>
       <span>Gemini</span>
+    </button>
+    <button class="nav-tab-btn" id="tab-btn-conversations" onclick="switchTab('view-conversations', this); loadConversationsList();">
+      <span class="nav-tab-icon">📜</span>
+      <span>Chats</span>
+    </button>
+    <button class="nav-tab-btn" id="tab-btn-projects" onclick="switchTab('view-projects', this); loadProjectsList();">
+      <span class="nav-tab-icon">📁</span>
+      <span>Proyectos</span>
     </button>
     <button class="nav-tab-btn" id="tab-btn-repos" onclick="switchTab('view-repos', this)">
       <span class="nav-tab-icon">☁️</span>

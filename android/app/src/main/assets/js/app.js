@@ -42,6 +42,10 @@ function switchTab(viewId, btnEl) {
 
   if (viewId === 'view-repos') {
     loadReposList();
+  } else if (viewId === 'view-conversations') {
+    loadConversationsList();
+  } else if (viewId === 'view-projects') {
+    loadProjectsList();
   }
 }
 
@@ -642,7 +646,7 @@ function handleBridgeEvents(data) {
 
 function initSettingsInputs() {
   const hostInput = document.getElementById('input-bridge-host');
-  if (hostInput) hostInput.value = BridgeClient.serverHost || '192.168.18.113:8765';
+  if (hostInput) hostInput.value = BridgeClient.getHost();
 
   const modelSelect = document.getElementById('setting-gemini-model');
   if (modelSelect) {
@@ -745,7 +749,7 @@ async function testHostConnection() {
   banner.style.color = 'var(--accent-blue)';
   banner.innerText = '⏳ Probando conexión con PC...';
 
-  const host = document.getElementById('input-bridge-host').value.trim() || BridgeClient.serverHost;
+  const host = document.getElementById('input-bridge-host').value.trim() || BridgeClient.getHost();
   const token = BridgeClient.token || 'antigravity-secret-key';
 
   try {
@@ -756,7 +760,7 @@ async function testHostConnection() {
       const data = await res.json();
       banner.style.color = 'var(--success)';
       banner.innerHTML = `✅ <b>Enlace exitoso con PC:</b> ${data.hostname || host} (${latency}ms)`;
-      BridgeClient.serverHost = host;
+      localStorage.setItem('bridge_host', host);
       BridgeClient.connect();
       AuthManager.checkSession();
     } else {
@@ -766,5 +770,403 @@ async function testHostConnection() {
   } catch (err) {
     banner.style.color = 'var(--danger)';
     banner.innerHTML = `❌ No se pudo conectar a ${host}: ${err.message}`;
+  }
+}
+
+// ==============================================================================
+// Módulo 5: Historial de Conversaciones (113 Sesiones Antigravity & Gemini Flash)
+// ==============================================================================
+
+let currentConvFilter = 'antigravity';
+let cachedAgyConversations = [];
+let cachedGeminiHistory = [];
+
+async function loadConversationsList() {
+  const container = document.getElementById('conv-list-container');
+  if (!container) return;
+
+  container.innerHTML = `
+    <div style="text-align:center; padding:25px; color:var(--text-muted);">
+      ⏳ Cargando conversaciones desde la PC...
+    </div>
+  `;
+
+  if (currentConvFilter === 'antigravity') {
+    try {
+      const res = await fetch(BridgeClient.apiUrl('/api/antigravity/conversations'));
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      cachedAgyConversations = data.conversations || [];
+      renderAgyConversations(cachedAgyConversations);
+    } catch (err) {
+      container.innerHTML = `
+        <div style="text-align:center; padding:25px; color:var(--danger);">
+          ❌ Error al conectar con el servidor: ${escapeHTML(err.message)}<br>
+          <button class="btn-action-small" style="margin-top:10px;" onclick="loadConversationsList()">Reintentar</button>
+        </div>
+      `;
+    }
+  } else {
+    try {
+      const res = await fetch(BridgeClient.apiUrl('/api/gemini/history'));
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      cachedGeminiHistory = data.history || [];
+      renderGeminiHistory(cachedGeminiHistory);
+    } catch (err) {
+      container.innerHTML = `
+        <div style="text-align:center; padding:25px; color:var(--danger);">
+          ❌ Error al cargar historial de Gemini: ${escapeHTML(err.message)}
+        </div>
+      `;
+    }
+  }
+}
+
+function switchConvFilter(type) {
+  currentConvFilter = type;
+  const btnAgy = document.getElementById('btn-filter-agy');
+  const btnGemini = document.getElementById('btn-filter-gemini');
+
+  if (type === 'antigravity') {
+    if (btnAgy) {
+      btnAgy.style.background = 'var(--accent-indigo)';
+      btnAgy.style.fontWeight = '700';
+    }
+    if (btnGemini) {
+      btnGemini.style.background = 'var(--bg-surface-elevated)';
+      btnGemini.style.fontWeight = 'normal';
+    }
+  } else {
+    if (btnAgy) {
+      btnAgy.style.background = 'var(--bg-surface-elevated)';
+      btnAgy.style.fontWeight = 'normal';
+    }
+    if (btnGemini) {
+      btnGemini.style.background = 'var(--accent-indigo)';
+      btnGemini.style.fontWeight = '700';
+    }
+  }
+
+  loadConversationsList();
+}
+
+function filterConversationsUI(query) {
+  const q = (query || '').toLowerCase().trim();
+  if (currentConvFilter === 'antigravity') {
+    if (!q) {
+      renderAgyConversations(cachedAgyConversations);
+      return;
+    }
+    const filtered = cachedAgyConversations.filter(c => 
+      (c.title && c.title.toLowerCase().includes(q)) ||
+      (c.summary && c.summary.toLowerCase().includes(q)) ||
+      (c.conversation_id && c.conversation_id.toLowerCase().includes(q))
+    );
+    renderAgyConversations(filtered);
+  } else {
+    if (!q) {
+      renderGeminiHistory(cachedGeminiHistory);
+      return;
+    }
+    const filtered = cachedGeminiHistory.filter(h =>
+      (h.prompt && h.prompt.toLowerCase().includes(q)) ||
+      (h.response && h.response.toLowerCase().includes(q))
+    );
+    renderGeminiHistory(filtered);
+  }
+}
+
+function renderAgyConversations(list) {
+  const container = document.getElementById('conv-list-container');
+  if (!container) return;
+
+  if (!list || list.length === 0) {
+    container.innerHTML = `
+      <div style="text-align:center; padding:25px; color:var(--text-muted);">
+        No se encontraron conversaciones.
+      </div>
+    `;
+    return;
+  }
+
+  let html = '';
+  list.forEach(conv => {
+    const title = escapeHTML(conv.title || 'Conversación sin título');
+    const summary = escapeHTML(conv.summary || 'Sin resumen disponible');
+    const dateStr = conv.timestamp ? new Date(conv.timestamp).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' }) : '';
+    const safeId = escapeHTML(conv.conversation_id || '');
+
+    html += `
+      <div class="conv-card" onclick="openConversationDetail('${safeId}', 'antigravity', '${title.replace(/'/g, "\\'")}', '${dateStr}')">
+        <div class="conv-title" style="display:flex; justify-content:space-between; align-items:flex-start;">
+          <span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">💬 ${title}</span>
+          <span style="font-size:0.7rem; color:var(--text-muted); margin-left:8px; flex-shrink:0;">${dateStr}</span>
+        </div>
+        <div class="conv-preview" style="display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; line-height:1.3; margin-top:3px;">
+          ${summary}
+        </div>
+        <div style="font-size:0.68rem; color:var(--accent-cyan); margin-top:5px; font-family:var(--font-mono);">
+          ID: ${safeId.substring(0, 8)}...
+        </div>
+      </div>
+    `;
+  });
+
+  container.innerHTML = html;
+}
+
+function renderGeminiHistory(list) {
+  const container = document.getElementById('conv-list-container');
+  if (!container) return;
+
+  if (!list || list.length === 0) {
+    container.innerHTML = `
+      <div style="text-align:center; padding:25px; color:var(--text-muted);">
+        No hay consultas recientes en el historial de Gemini.
+      </div>
+    `;
+    return;
+  }
+
+  let html = '';
+  list.forEach((item, idx) => {
+    const prompt = escapeHTML(item.prompt || '');
+    const respPreview = escapeHTML((item.response || '').substring(0, 160));
+    const model = escapeHTML(item.model || 'gemini-3.8-flash');
+    const timeStr = item.timestamp ? new Date(item.timestamp * 1000).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' }) : '';
+
+    html += `
+      <div class="conv-card" onclick="openGeminiDetail(${idx})">
+        <div class="conv-title" style="display:flex; justify-content:space-between; align-items:center;">
+          <span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">⚡ ${prompt}</span>
+          <span class="badge-tag" style="font-size:0.65rem; margin-left:6px;">${model}</span>
+        </div>
+        <div class="conv-preview" style="display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; line-height:1.3; margin-top:3px;">
+          ${respPreview}...
+        </div>
+        <div style="font-size:0.7rem; color:var(--text-muted); margin-top:4px;">${timeStr}</div>
+      </div>
+    `;
+  });
+
+  container.innerHTML = html;
+}
+
+async function openConversationDetail(cid, type, title, meta) {
+  const modal = document.getElementById('conv-reader-modal');
+  const titleEl = document.getElementById('conv-reader-title');
+  const metaEl = document.getElementById('conv-reader-meta');
+  const msgContainer = document.getElementById('conv-reader-messages');
+
+  if (!modal || !msgContainer) return;
+
+  if (titleEl) titleEl.innerText = title;
+  if (metaEl) metaEl.innerText = `${meta} • ID: ${cid}`;
+  msgContainer.innerHTML = `
+    <div style="text-align:center; padding:20px; color:var(--text-muted);">
+      ⏳ Cargando mensajes de la conversación...
+    </div>
+  `;
+  modal.style.display = 'flex';
+
+  try {
+    const res = await fetch(BridgeClient.apiUrl(`/api/antigravity/conversation?id=${encodeURIComponent(cid)}`));
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    const messages = data.messages || [];
+
+    if (messages.length === 0) {
+      msgContainer.innerHTML = `
+        <div style="text-align:center; padding:20px; color:var(--text-muted);">
+          No se encontraron mensajes registrados en esta sesión.
+        </div>
+      `;
+      return;
+    }
+
+    let html = '';
+    messages.forEach(msg => {
+      const isUser = msg.role === 'user';
+      const roleName = isUser ? '👤 Tú' : (msg.role === 'assistant' ? '⚡ Antigravity' : '⚙️ Sistema');
+      const cardClass = isUser ? 'user' : (msg.role === 'assistant' ? 'gemini' : 'system');
+      const time = msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) : '';
+      const text = formatMessageText(msg.content || '');
+
+      html += `
+        <div class="message-card ${cardClass}" style="margin-bottom:10px;">
+          <div style="display:flex; justify-content:space-between; margin-bottom:4px; font-size:0.72rem; opacity:0.8;">
+            <b>${roleName}</b>
+            <span>${time}</span>
+          </div>
+          <div style="font-size:0.85rem; line-height:1.45; word-break:break-word;">
+            ${text}
+          </div>
+        </div>
+      `;
+    });
+
+    msgContainer.innerHTML = html;
+    msgContainer.scrollTop = 0;
+  } catch (err) {
+    msgContainer.innerHTML = `
+      <div style="text-align:center; padding:20px; color:var(--danger);">
+        ❌ Error al cargar transcripción: ${escapeHTML(err.message)}
+      </div>
+    `;
+  }
+}
+
+function openGeminiDetail(idx) {
+  const item = cachedGeminiHistory[idx];
+  if (!item) return;
+
+  const modal = document.getElementById('conv-reader-modal');
+  const titleEl = document.getElementById('conv-reader-title');
+  const metaEl = document.getElementById('conv-reader-meta');
+  const msgContainer = document.getElementById('conv-reader-messages');
+
+  if (!modal || !msgContainer) return;
+
+  if (titleEl) titleEl.innerText = item.prompt || 'Consulta Gemini';
+  if (metaEl) metaEl.innerText = `${item.model || 'gemini-3.8-flash'} • ${item.timestamp ? new Date(item.timestamp * 1000).toLocaleString('es-ES') : ''}`;
+
+  let html = `
+    <div class="message-card user" style="margin-bottom:10px;">
+      <div style="font-size:0.72rem; opacity:0.8; margin-bottom:4px;"><b>👤 Consulta:</b></div>
+      <div style="font-size:0.85rem; line-height:1.45;">${escapeHTML(item.prompt || '')}</div>
+    </div>
+  `;
+
+  if (item.thinking) {
+    html += `
+      <div class="message-card" style="margin-bottom:10px; background:#12141a; border-left:3px solid var(--accent-indigo);">
+        <div style="font-size:0.72rem; color:var(--accent-indigo); margin-bottom:4px;"><b>🧠 Razonamiento (Thinking Budget):</b></div>
+        <div style="font-size:0.78rem; font-family:var(--font-mono); color:var(--text-muted); white-space:pre-wrap;">${escapeHTML(item.thinking)}</div>
+      </div>
+    `;
+  }
+
+  html += `
+    <div class="message-card gemini" style="margin-bottom:10px;">
+      <div style="font-size:0.72rem; opacity:0.8; margin-bottom:4px;"><b>⚡ Gemini 3.8 Flash High:</b></div>
+      <div style="font-size:0.85rem; line-height:1.45;">${formatMessageText(item.response || '')}</div>
+    </div>
+  `;
+
+  msgContainer.innerHTML = html;
+  modal.style.display = 'flex';
+  msgContainer.scrollTop = 0;
+}
+
+function closeConvReader() {
+  const modal = document.getElementById('conv-reader-modal');
+  if (modal) modal.style.display = 'none';
+}
+
+function formatMessageText(content) {
+  if (!content) return '';
+  let text = escapeHTML(content);
+  // Bloques de código
+  text = text.replace(/```([a-zA-Z0-9_-]*)\n([\s\S]*?)```/g, (m, lang, code) => {
+    return `<pre style="background:#0c0d12; padding:8px 10px; border-radius:6px; overflow-x:auto; font-family:var(--font-mono); font-size:0.8rem; margin:6px 0; border:1px solid var(--border-subtle); color:#a7f3d0;"><code>${code}</code></pre>`;
+  });
+  // Código inline
+  text = text.replace(/`([^`]+)`/g, '<code style="background:#161922; padding:2px 5px; border-radius:4px; font-family:var(--font-mono); font-size:0.82rem; color:var(--accent-cyan);">$1</code>');
+  // Negrita
+  text = text.replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>');
+  // Saltos de línea
+  text = text.replace(/\n/g, '<br>');
+  return text;
+}
+
+// ==============================================================================
+// Módulo 6: Proyectos de Desarrollo en PC (46 Proyectos en Windows)
+// ==============================================================================
+
+let cachedProjects = [];
+
+async function loadProjectsList() {
+  const container = document.getElementById('projects-list-container');
+  if (!container) return;
+
+  container.innerHTML = `
+    <div style="text-align:center; padding:25px; color:var(--text-muted);">
+      ⏳ Escaneando proyectos locales en la PC...
+    </div>
+  `;
+
+  try {
+    const res = await fetch(BridgeClient.apiUrl('/api/projects'));
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    cachedProjects = data.projects || [];
+
+    if (cachedProjects.length === 0) {
+      container.innerHTML = `
+        <div style="text-align:center; padding:25px; color:var(--text-muted);">
+          No se encontraron carpetas de proyectos en las rutas monitoreadas.
+        </div>
+      `;
+      return;
+    }
+
+    let html = '';
+    cachedProjects.forEach(proj => {
+      const name = escapeHTML(proj.name || 'Proyecto');
+      const path = escapeHTML(proj.path || '');
+      const isGit = proj.is_git;
+      const branch = escapeHTML(proj.branch || 'no-git');
+      const commit = escapeHTML((proj.commit || '').substring(0, 7));
+      const status = proj.status || 'clean';
+      const statusBadge = isGit 
+        ? (status === 'modified' ? '<span class="badge-tag" style="background:#b45309;">⚠️ Modificado</span>' : '<span class="badge-tag" style="background:#065f46;">✓ Limpio</span>')
+        : '<span class="badge-tag" style="background:#374151;">📁 Directorio</span>';
+
+      html += `
+        <div class="project-card">
+          <div class="project-title" style="display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-size:0.95rem; font-weight:700; color:#fff;">📦 ${name}</span>
+            <div>${statusBadge}</div>
+          </div>
+          <div style="font-size:0.72rem; color:var(--accent-cyan); font-family:var(--font-mono); word-break:break-all; margin:3px 0 6px 0;">
+            ${path}
+          </div>
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-top:6px;">
+            <div style="font-size:0.72rem; color:var(--text-muted);">
+              ${isGit ? `🌿 Rama: <b>${branch}</b> • #${commit}` : 'Directorio local'}
+            </div>
+            <button class="btn-action-small" style="background:var(--accent-indigo); font-weight:600;" onclick="switchProject('${path.replace(/\\/g, '\\\\')}')">
+              👉 Activar en PC
+            </button>
+          </div>
+        </div>
+      `;
+    });
+
+    container.innerHTML = html;
+  } catch (err) {
+    container.innerHTML = `
+      <div style="text-align:center; padding:25px; color:var(--danger);">
+        ❌ Error al conectar con el servidor: ${escapeHTML(err.message)}<br>
+        <button class="btn-action-small" style="margin-top:10px;" onclick="loadProjectsList()">Reintentar</button>
+      </div>
+    `;
+  }
+}
+
+async function switchProject(targetPath) {
+  try {
+    const res = await fetch(BridgeClient.apiUrl('/api/projects/switch'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path: targetPath })
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    alert(`✅ Proyecto activo cambiado a:\n${data.name} (${data.path})`);
+    loadProjectsList();
+  } catch (err) {
+    alert(`❌ No se pudo cambiar de proyecto: ${err.message}`);
   }
 }

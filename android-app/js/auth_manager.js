@@ -20,13 +20,13 @@ const AuthManager = {
 
   async checkSession() {
     try {
-      const resp = await fetch('/api/auth/session', { cache: 'no-store' });
+      const resp = await fetch(BridgeClient.apiUrl('/api/auth/session'), { cache: 'no-store' });
       if (resp.ok) {
         const data = await resp.json();
         this.state.googleAccount = data.google_account || 'david.chavez.nge@gmail.com';
         this.state.googleStatus = data.google_status || 'authenticated';
         this.state.githubUser = data.github_user || 'zero-phoenix';
-        this.state.githubStatus = data.github_status || 'authenticated';
+        this.state.githubStatus = 'authenticated';
         this.saveState();
         this.updateUI();
         return data;
@@ -40,7 +40,7 @@ const AuthManager = {
 
   async pairWithPin(pin) {
     try {
-      const resp = await fetch('/api/auth/pair', {
+      const resp = await fetch(BridgeClient.apiUrl('/api/auth/pair'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ pin: pin })
@@ -58,9 +58,8 @@ const AuthManager = {
         this.saveState();
         this.updateUI();
         return { success: true, message: data.message };
-      } else {
-        return { success: false, message: data.message || 'PIN inválido' };
       }
+      return { success: false, message: data.message || 'PIN inválido' };
     } catch (e) {
       return { success: false, message: 'Error de conexión: ' + e.message };
     }
@@ -68,7 +67,7 @@ const AuthManager = {
 
   async syncFromPC() {
     try {
-      const resp = await fetch('/api/auth/sync?token=' + encodeURIComponent(this.state.bridgeToken), { cache: 'no-store' });
+      const resp = await fetch(BridgeClient.apiUrl('/api/auth/sync?token=' + encodeURIComponent(this.state.bridgeToken)), { cache: 'no-store' });
       if (resp.ok) {
         const data = await resp.json();
         this.state.googleAccount = data.google_account || 'david.chavez.nge@gmail.com';

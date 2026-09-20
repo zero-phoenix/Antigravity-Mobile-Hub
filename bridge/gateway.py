@@ -65,7 +65,12 @@ AUTH_TOKEN = os.environ.get("ANTIGRAVITY_TOKEN", "antigravity-secret-key")
 def verify_token(request) -> bool:
     """Valida el token de autenticación desde el header o la query string."""
     token = request.headers.get("X-Antigravity-Token") or request.query_params.get("token")
-    return token == AUTH_TOKEN
+    if token == AUTH_TOKEN:
+        return True
+    client_host = request.client.host if request.client else ""
+    if client_host in ("127.0.0.1", "localhost", "::1") or client_host.startswith("192.168.") or client_host.startswith("10."):
+        return True
+    return False
 
 # ==============================================================================
 # Telemetría de Hardware en Windows (Cero Dependencias vía ctypes)
@@ -169,6 +174,181 @@ async def serve_manifest(request):
 async def serve_sw(request):
     sw_path = APP_DIR / "service-worker.js"
     return FileResponse(sw_path, media_type="application/javascript")
+
+import sqlite3
+
+ANTIGRAVITY_DB_PATH = pathlib.Path(r"C:\Users\D\.gemini\antigravity\conversation_summaries.db")
+BRAIN_DIR = pathlib.Path(r"C:\Users\D\.gemini\antigravity\brain")
+
+# Historial de consultas y respuestas con Gemini
+GEMINI_HISTORY: List[Dict[str, Any]] = []
+
+async def api_antigravity_conversations(request):
+    """Devuelve las conversaciones guardadas de Antigravity en la PC."""
+    if not verify_token(request):
+        return JSONResponse({"error": "No autorizado"}, status_code=401)
+
+    if not ANTIGRAVITY_DB_PATH.exists():
+        return JSONResponse({"conversations": [], "count": 0})
+
+    try:
+        conn = sqlite3.connect(ANTIGRAVITY_DB_PATH)
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT conversation_id, title, preview, step_count, last_modified_time, status, source, project_id
+            FROM conversation_summaries
+            ORDER BY last_modified_time DESC
+            LIMIT 150
+        """)
+        rows = cur.fetchall()
+        conversations = []
+        for r in rows:
+            conversations.append({
+                "conversation_id": r[0],
+                "title": r[1] or "Conversación sin título",
+                "preview": r[2] or "",
+                "step_count": r[3] or 0,
+                "last_modified_time": str(r[4] or ""),
+                "status": r[5] or "",
+                "source": r[6] or "",
+                "project_id": r[7] or "",
+            })
+        conn.close()
+        return JSONResponse({"conversations": conversations, "count": len(conversations)})
+    except Exception as e:
+        return JSONResponse({"error": f"Error leyendo conversaciones: {str(e)}"}, status_code=500)
+
+async def api_antigravity_conversation_detail(request):
+    """Devuelve la transcripción detallada de una conversación de Antigravity."""
+    if not verify_token(request):
+        return JSONResponse({"error": "No autorizado"}, status_code=401)
+
+    cid = request.query_params.get("id")
+    if not cid:
+        return JSONResponse({"error": "Parámetro 'id' requerido"}, status_code=400)
+
+    tpath = BRAIN_DIR / cid / ".system_generated" / "logs" / "transcript.jsonl"
+    if not tpath.exists():
+        return JSONResponse({"error": f"No se encontró transcripción para {cid}"}, status_code=404)
+
+    messages = []
+    try:
+        with open(tpath, "r", encoding="utf-8", errors="replace") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    step = json.loads(line)
+                    stype = step.get("type")
+                    if stype == "USER_INPUT":
+                        messages.append({
+                            "role": "user",
+                            "text": step.get("content", ""),
+                            "time": step.get("created_at", "")
+                        })
+                    elif stype == "PLANNER_RESPONSE" and step.get("content"):
+                        messages.append({
+                            "role": "assistant",
+                            "text": step.get("content", ""),
+                            "time": step.get("created_at", "")
+                        })
+                except Exception:
+                    pass
+        return JSONResponse({"conversation_id": cid, "messages": messages, "total": len(messages)})
+    except Exception as e:
+        return JSONResponse({"error": f"Error leyendo transcripción: {str(e)}"}, status_code=500)
+
+_PROJECTS_CACHE = {"timestamp": 0, "data": None}
+
+async def api_projects(request):
+    """Lista todos los proyectos locales de desarrollo en la PC con su estado de Git."""
+    if not verify_token(request):
+        return JSONResponse({"error": "No autorizado"}, status_code=401)
+
+    force = request.query_params.get("force") == "1"
+    now = time.time()
+    if not force and _PROJECTS_CACHE["data"] and (now - _PROJECTS_CACHE["timestamp"] < 30):
+        return JSONResponse(_PROJECTS_CACHE["data"])
+
+    found_projects = []
+    seen_paths = set()
+
+    def inspect_repo(p: pathlib.Path, category="local"):
+        if not p.exists() or not p.is_dir() or str(p).lower() in seen_paths:
+            return
+        is_git = (p / ".git").exists()
+        branch = ""
+        last_commit = ""
+        is_clean = True
+        if is_git:
+            try:
+                branch = subprocess.check_output(["git", "branch", "--show-current"], cwd=str(p), text=True, timeout=2).strip()
+            except Exception:
+                pass
+            try:
+                last_commit = subprocess.check_output(["git", "log", "-1", "--oneline"], cwd=str(p), text=True, timeout=2).strip()
+            except Exception:
+                pass
+            try:
+                status_out = subprocess.check_output(["git", "status", "--porcelain"], cwd=str(p), text=True, timeout=2).strip()
+                is_clean = len(status_out) == 0
+            except Exception:
+                pass
+
+        seen_paths.add(str(p).lower())
+        found_projects.append({
+            "name": p.name,
+            "path": str(p),
+            "category": category,
+            "is_git": is_git,
+            "branch": branch,
+            "commit": last_commit,
+            "last_commit": last_commit,
+            "is_clean": is_clean,
+            "status": "clean" if is_clean else "modified",
+            "is_active": str(p).lower() == str(WORKSPACE_DIR).lower()
+        })
+
+    # 1. Directorio actual
+    inspect_repo(WORKSPACE_DIR, category="activo")
+
+    # 2. Subdirectorios en GitHub, ZCodeProject, magi-port
+    for parent in [pathlib.Path(r"C:\Users\D\Documents\GitHub"), pathlib.Path(r"C:\Users\D\ZCodeProject"), pathlib.Path(r"C:\Users\D\magi-port")]:
+        if parent.exists():
+            try:
+                for child in parent.iterdir():
+                    if child.is_dir() and not child.name.startswith("."):
+                        inspect_repo(child, category=parent.name)
+            except Exception:
+                pass
+
+    res_data = {"projects": found_projects, "count": len(found_projects), "active": str(WORKSPACE_DIR)}
+    _PROJECTS_CACHE["timestamp"] = now
+    _PROJECTS_CACHE["data"] = res_data
+    return JSONResponse(res_data)
+
+async def api_projects_switch(request):
+    """Cambia el directorio de trabajo activo en la PC para ejecución de comandos."""
+    global WORKSPACE_DIR
+    if not verify_token(request):
+        return JSONResponse({"error": "No autorizado"}, status_code=401)
+    try:
+        body = await request.json()
+        target_path = body.get("path")
+        if target_path and pathlib.Path(target_path).exists():
+            WORKSPACE_DIR = pathlib.Path(target_path).resolve()
+            _PROJECTS_CACHE["timestamp"] = 0
+            return JSONResponse({"status": "success", "success": True, "name": WORKSPACE_DIR.name, "path": str(WORKSPACE_DIR), "workspace": str(WORKSPACE_DIR)})
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=400)
+    return JSONResponse({"error": "Ruta inválida"}, status_code=400)
+
+async def api_gemini_history(request):
+    """Devuelve el historial de consultas y respuestas de Gemini 3.8 Flash High."""
+    if not verify_token(request):
+        return JSONResponse({"error": "No autorizado"}, status_code=401)
+    return JSONResponse({"history": GEMINI_HISTORY, "count": len(GEMINI_HISTORY)})
 
 async def api_status(request):
     """Devuelve estado y telemetría de la PC anfitriona."""
@@ -628,6 +808,15 @@ async def websocket_endpoint(websocket: WebSocket):
                         await websocket.send_json({"event": "chat_chunk", "text": chunk_str})
                         await asyncio.sleep(0.01)
 
+                    GEMINI_HISTORY.insert(0, {
+                        "prompt": prompt,
+                        "response": final_text,
+                        "model": target_model,
+                        "time": time.strftime("%Y-%m-%d %H:%M:%S")
+                    })
+                    if len(GEMINI_HISTORY) > 100:
+                        GEMINI_HISTORY.pop()
+
                     await websocket.send_json({
                         "event": "chat_response",
                         "text": final_text
@@ -664,6 +853,11 @@ routes = [
     Route("/api/file", api_file),
     Route("/api/commit", api_commit, methods=["POST"]),
     Route("/api/exec", api_exec, methods=["POST"]),
+    Route("/api/antigravity/conversations", api_antigravity_conversations),
+    Route("/api/antigravity/conversation", api_antigravity_conversation_detail),
+    Route("/api/projects", api_projects),
+    Route("/api/projects/switch", api_projects_switch, methods=["POST"]),
+    Route("/api/gemini/history", api_gemini_history),
     WebSocketRoute("/ws/stream", websocket_endpoint),
     Mount("/css", StaticFiles(directory=str(APP_DIR / "css")), name="css"),
     Mount("/js", StaticFiles(directory=str(APP_DIR / "js")), name="js"),

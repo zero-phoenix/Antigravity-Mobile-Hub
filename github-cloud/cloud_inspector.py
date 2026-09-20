@@ -281,6 +281,87 @@ def cloud_compare_files(repo_a: str, path_a: str, repo_b: str, path_b: str) -> D
         "diff": "\n".join(diff[:250])
     }
 
+def cloud_create_or_update_file(repo: str, path: str, content: str, message: str, branch: Optional[str] = None) -> Dict[str, Any]:
+    """
+    Crea o actualiza un archivo en cualquier repositorio de GitHub directamente desde la memoria RAM,
+    generando un nuevo commit sin necesidad de clonar ni descargar el repositorio.
+    """
+    owner, repo_name = normalize_repo(repo)
+    full_repo = f"{owner}/{repo_name}"
+    token = get_github_token()
+    if not token:
+        return {"error": "Se requiere autenticación con GitHub (token no encontrado)"}
+
+    # 1. Obtener SHA previo si el archivo ya existe
+    sha = None
+    try:
+        req = urllib.request.Request(
+            f"{GITHUB_API_BASE}/repos/{full_repo}/contents/{path.lstrip('/')}",
+            headers={
+                "User-Agent": "Antigravity-UniversalInspector/2.0",
+                "Accept": "application/vnd.github.v3+json",
+                "Authorization": f"Bearer {token}",
+            }
+        )
+        if branch:
+            req.full_url += f"?ref={urllib.parse.quote(branch)}"
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            sha = data.get("sha")
+    except urllib.error.HTTPError as e:
+        if e.code != 404:
+            return {"error": f"Error verificando archivo: HTTP {e.code}"}
+    except Exception as e:
+        return {"error": f"Error de conexión: {str(e)}"}
+
+    # 2. Construir payload de commit
+    b64_content = base64.b64encode(content.encode("utf-8")).decode("ascii")
+    payload = {
+        "message": message or f"update: {path} via Antigravity Mobile Hub",
+        "content": b64_content,
+    }
+    if sha:
+        payload["sha"] = sha
+    if branch:
+        payload["branch"] = branch
+
+    # 3. Enviar PUT a la API de contenidos de GitHub
+    try:
+        req_put = urllib.request.Request(
+            f"{GITHUB_API_BASE}/repos/{full_repo}/contents/{path.lstrip('/')}",
+            data=json.dumps(payload).encode("utf-8"),
+            headers={
+                "User-Agent": "Antigravity-UniversalInspector/2.0",
+                "Accept": "application/vnd.github.v3+json",
+                "Authorization": f"Bearer {token}",
+                "Content-Type": "application/json",
+            },
+            method="PUT"
+        )
+        with urllib.request.urlopen(req_put, timeout=15) as resp:
+            result = json.loads(resp.read().decode("utf-8"))
+            
+            # Invalidar entradas de caché de este archivo y del árbol
+            cache_keys_to_delete = [k for k in _RAM_CACHE.keys() if full_repo in k]
+            for k in cache_keys_to_delete:
+                del _RAM_CACHE[k]
+
+            commit_info = result.get("commit", {})
+            return {
+                "status": "success",
+                "repository": full_repo,
+                "path": path,
+                "commit_sha": commit_info.get("sha"),
+                "commit_message": commit_info.get("message"),
+                "html_url": commit_info.get("html_url"),
+                "is_update": sha is not None
+            }
+    except urllib.error.HTTPError as e:
+        err_body = e.read().decode("utf-8", errors="replace")
+        return {"error": f"HTTP {e.code}: {err_body}"}
+    except Exception as e:
+        return {"error": f"Fallo al crear commit: {str(e)}"}
+
 # Mapa de herramientas disponibles para Gemini
 CLOUD_TOOLS_MAP = {
     "cloud_list_repositories": cloud_list_repositories,
@@ -288,4 +369,5 @@ CLOUD_TOOLS_MAP = {
     "cloud_read_file": cloud_read_file,
     "cloud_search_code": cloud_search_code,
     "cloud_compare_files": cloud_compare_files,
+    "cloud_create_or_update_file": cloud_create_or_update_file,
 }

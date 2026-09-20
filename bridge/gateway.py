@@ -43,6 +43,89 @@ def verify_token(request) -> bool:
     return token == AUTH_TOKEN
 
 # ==============================================================================
+# Telemetría de Hardware en Windows (Cero Dependencias vía ctypes)
+# ==============================================================================
+import ctypes
+import time
+
+class MEMORYSTATUSEX(ctypes.Structure):
+    _fields_ = [
+        ("dwLength", ctypes.c_ulong),
+        ("dwMemoryLoad", ctypes.c_ulong),
+        ("ullTotalPhys", ctypes.c_ulonglong),
+        ("ullAvailPhys", ctypes.c_ulonglong),
+        ("ullTotalPageFile", ctypes.c_ulonglong),
+        ("ullAvailPageFile", ctypes.c_ulonglong),
+        ("ullTotalVirtual", ctypes.c_ulonglong),
+        ("ullAvailVirtual", ctypes.c_ulonglong),
+        ("sullAvailExtendedVirtual", ctypes.c_ulonglong),
+    ]
+
+class SYSTEM_POWER_STATUS(ctypes.Structure):
+    _fields_ = [
+        ("ACLineStatus", ctypes.c_byte),
+        ("BatteryFlag", ctypes.c_byte),
+        ("BatteryLifePercent", ctypes.c_byte),
+        ("SystemStatusFlag", ctypes.c_byte),
+        ("BatteryLifeTime", ctypes.c_ulong),
+        ("BatteryFullLifeTime", ctypes.c_ulong),
+    ]
+
+class FILETIME(ctypes.Structure):
+    _fields_ = [("dwLowDateTime", ctypes.c_uint), ("dwHighDateTime", ctypes.c_uint)]
+
+def _filetime_to_int(ft):
+    return (ft.dwHighDateTime << 32) + ft.dwLowDateTime
+
+def get_system_telemetry() -> Dict[str, Any]:
+    """Obtiene telemetría en tiempo real de CPU, RAM, batería y estado del host Windows."""
+    try:
+        # RAM
+        stat = MEMORYSTATUSEX()
+        stat.dwLength = ctypes.sizeof(MEMORYSTATUSEX)
+        ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(stat))
+        total_ram_gb = round(stat.ullTotalPhys / (1024**3), 2)
+        free_ram_gb = round(stat.ullAvailPhys / (1024**3), 2)
+        used_ram_gb = round(total_ram_gb - free_ram_gb, 2)
+        ram_percent = int(stat.dwMemoryLoad)
+
+        # Batería / AC
+        pwr = SYSTEM_POWER_STATUS()
+        ctypes.windll.kernel32.GetSystemPowerStatus(ctypes.byref(pwr))
+        ac_line = int(pwr.ACLineStatus)
+        battery_pct = int(pwr.BatteryLifePercent) if pwr.BatteryLifePercent <= 100 else 100
+
+        # CPU (Muestreo ultrarrápido de 40ms)
+        idle1, kernel1, user1 = FILETIME(), FILETIME(), FILETIME()
+        idle2, kernel2, user2 = FILETIME(), FILETIME(), FILETIME()
+        ctypes.windll.kernel32.GetSystemTimes(ctypes.byref(idle1), ctypes.byref(kernel1), ctypes.byref(user1))
+        time.sleep(0.04)
+        ctypes.windll.kernel32.GetSystemTimes(ctypes.byref(idle2), ctypes.byref(kernel2), ctypes.byref(user2))
+        
+        i1, k1, u1 = _filetime_to_int(idle1), _filetime_to_int(kernel1), _filetime_to_int(user1)
+        i2, k2, u2 = _filetime_to_int(idle2), _filetime_to_int(kernel2), _filetime_to_int(user2)
+        total_ticks = (k2 - k1) + (u2 - u1)
+        idle_ticks = i2 - i1
+        cpu_pct = 0.0
+        if total_ticks > 0:
+            cpu_pct = round(100.0 * (1.0 - idle_ticks / total_ticks), 1)
+            cpu_pct = max(0.0, min(100.0, cpu_pct))
+
+        return {
+            "cpu_percent": cpu_pct,
+            "ram_total_gb": total_ram_gb,
+            "ram_used_gb": used_ram_gb,
+            "ram_free_gb": free_ram_gb,
+            "ram_percent": ram_percent,
+            "ac_connected": ac_line == 1,
+            "battery_percent": battery_pct,
+            "hostname": socket.gethostname(),
+            "os": sys.platform,
+        }
+    except Exception as e:
+        return {"error": f"Fallo al medir telemetría: {str(e)}"}
+
+# ==============================================================================
 # Rutas HTTP
 # ==============================================================================
 
@@ -148,6 +231,34 @@ async def api_exec(request):
         "stderr": stderr.decode("utf-8", errors="replace"),
     })
 
+async def api_telemetry(request):
+    """Devuelve telemetría de CPU, RAM, batería y plataforma en tiempo real."""
+    if not verify_token(request):
+        return JSONResponse({"error": "No autorizado"}, status_code=401)
+    data = get_system_telemetry()
+    return JSONResponse(data)
+
+async def api_commit(request):
+    """Crea o actualiza un archivo en GitHub directamente en RAM generando un commit."""
+    if not verify_token(request):
+        return JSONResponse({"error": "No autorizado"}, status_code=401)
+    try:
+        body = await request.json()
+        repo = body.get("repo")
+        path = body.get("path")
+        content = body.get("content")
+        message = body.get("message", f"Update {path} via Antigravity Mobile Hub")
+        branch = body.get("branch")
+    except Exception:
+        return JSONResponse({"error": "Cuerpo JSON inválido"}, status_code=400)
+
+    if not repo or not path or content is None:
+        return JSONResponse({"error": "Parámetros 'repo', 'path' y 'content' requeridos"}, status_code=400)
+
+    res = cloud_inspector.cloud_create_or_update_file(repo, path, content, message, branch=branch)
+    status_code = 200 if res.get("status") == "success" else 400
+    return JSONResponse(res, status_code=status_code)
+
 # ==============================================================================
 # WebSocket Bidireccional
 # ==============================================================================
@@ -206,6 +317,13 @@ async def websocket_endpoint(websocket: WebSocket):
                     "stderr": stderr.decode("utf-8", errors="replace") if stderr else ""
                 })
 
+            elif msg_type == "get_telemetry":
+                telemetry = get_system_telemetry()
+                await websocket.send_json({
+                    "event": "telemetry_update",
+                    "data": telemetry
+                })
+
             elif msg_type == "chat":
                 prompt = data.get("prompt", "").strip()
                 options = data.get("options", {})
@@ -252,6 +370,13 @@ async def websocket_endpoint(websocket: WebSocket):
                         except Exception as e:
                             return {"error": f"Error ejecutando en PC: {str(e)}"}
 
+                    def inspect_system_telemetry() -> Dict[str, Any]:
+                        """
+                        Inspecciona la telemetría en tiempo real de la PC anfitriona (Windows):
+                        uso de CPU (%), uso y total de memoria RAM (GB), estado de energía y batería.
+                        """
+                        return get_system_telemetry()
+
                     client = genai.Client()
                     tools = [
                         cloud_inspector.cloud_list_repositories,
@@ -259,16 +384,20 @@ async def websocket_endpoint(websocket: WebSocket):
                         cloud_inspector.cloud_read_file,
                         cloud_inspector.cloud_search_code,
                         cloud_inspector.cloud_compare_files,
+                        cloud_inspector.cloud_create_or_update_file,
+                        inspect_system_telemetry,
                         delegate_to_desktop,
                     ]
 
                     # Mapeo de ejecución local
                     active_tools_map = dict(cloud_inspector.CLOUD_TOOLS_MAP)
+                    active_tools_map["inspect_system_telemetry"] = inspect_system_telemetry
                     active_tools_map["delegate_to_desktop"] = delegate_to_desktop
 
                     system_instruction = (
-                        "Eres Antigravity Mobile Hub. El usuario te habla desde su celular conectado a su cuenta de GitHub (zero-phoenix) y su PC. "
-                        "Tienes acceso a inspeccionar repositorios en la nube (cloud_*) propios y de terceros, y puedes DELEGAR comandos "
+                        "Eres Antigravity Mobile Hub Supremo. El usuario te habla desde su teléfono Android conectado a su cuenta de GitHub (zero-phoenix) y su PC. "
+                        "Tienes acceso a inspeccionar repositorios en la nube (cloud_*) propios y de terceros, crear o actualizar archivos y commits directos "
+                        "mediante cloud_create_or_update_file, inspeccionar la salud del equipo mediante inspect_system_telemetry, y DELEGAR comandos "
                         "a la PC de Windows mediante 'delegate_to_desktop' para ejecutar git, compilaciones, tests o inspecciones locales. "
                     )
                     if strict:
@@ -340,9 +469,11 @@ routes = [
     Route("/manifest.json", serve_manifest),
     Route("/service-worker.js", serve_sw),
     Route("/api/status", api_status),
+    Route("/api/telemetry", api_telemetry),
     Route("/api/repos", api_repos),
     Route("/api/tree", api_tree),
     Route("/api/file", api_file),
+    Route("/api/commit", api_commit, methods=["POST"]),
     Route("/api/exec", api_exec, methods=["POST"]),
     WebSocketRoute("/ws/stream", websocket_endpoint),
     Mount("/css", StaticFiles(directory=str(APP_DIR / "css")), name="css"),

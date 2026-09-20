@@ -17,7 +17,7 @@
     <div class="brand-wrapper">
       <span class="brand-icon">⚡</span>
       <span class="brand-title">Antigravity</span>
-      <span class="badge-tag">Hub v1.1</span>
+      <span class="badge-tag">Hub Supremo v2.0</span>
     </div>
     <div class="header-actions">
       <div class="host-badge" id="host-badge" onclick="switchTab('view-settings', document.getElementById('tab-btn-settings'))" title="Toca para configurar conexión">
@@ -26,6 +26,14 @@
       </div>
     </div>
   </header>
+
+  <!-- Barra de Telemetría PC en Vivo (Hardware Monitor) -->
+  <div class="telemetry-bar" id="telemetry-bar" style="display:none;">
+    <span class="telem-chip" id="telem-cpu">💻 CPU: --%</span>
+    <span class="telem-chip" id="telem-ram">🧠 RAM: --/-- GB</span>
+    <span class="telem-chip" id="telem-pwr">⚡ AC: --</span>
+    <button class="btn-telemetry-refresh" style="background:transparent; border:none; color:var(--text-muted); cursor:pointer;" onclick="fetchTelemetry()" title="Actualizar">🔄</button>
+  </div>
 
   <!-- Quick Model & Grounding Bar (Visible en Gemini) -->
   <div class="gemini-quick-bar" id="gemini-subbar">
@@ -49,13 +57,14 @@
 
       <div class="chat-scroll-area" id="chat-scroll">
         <div class="message-card gemini">
-          👋 <b>Bienvenido a Antigravity Mobile v1.1.</b><br>
-          Estoy conectado a tu sesión y a la nube de GitHub. Puedes pedirme leer repositorios sin descargarlos, o pedirme ejecutar tareas en tu computadora.
+          👋 <b>Bienvenido a Antigravity Mobile Supremo v2.0.</b><br>
+          Estoy conectado a tu sesión de Windows, a la telemetría de tu PC y a GitHub en la nube. Puedes dictarme por voz, pedirme leer o editar código en RAM, y ejecutar tareas en tu computadora.
         </div>
       </div>
 
       <div class="chat-composer">
-        <input type="text" id="gemini-prompt-input" class="composer-input" placeholder="Pregunta o instruye a Gemini..." onkeydown="if(event.key==='Enter') handleSendPrompt()">
+        <button class="btn-voice-mic" id="btn-mic" onclick="toggleVoiceRecognition()" title="Dictar por voz">🎙️</button>
+        <input type="text" id="gemini-prompt-input" class="composer-input" placeholder="Pregunta, instruye o dicta por voz..." onkeydown="if(event.key==='Enter') handleSendPrompt()">
         <button class="btn-icon-send" onclick="handleSendPrompt()">➤</button>
       </div>
     </section>
@@ -177,19 +186,28 @@
 
   </main>
 
-  <!-- Modal Visor de Código de Repositorio -->
+  <!-- Modal Visor y Editor de Código en RAM -->
   <div id="file-viewer-modal" class="modal-overlay" style="display:none;">
     <div class="modal-card">
       <div class="modal-header">
         <div>
           <span id="modal-file-title" style="font-weight:700; color:#fff; font-size:0.9rem;">archivo.c</span>
           <div id="modal-file-meta" style="font-size:0.75rem; color:var(--text-muted);">0 líneas</div>
+          <div class="modal-tabs">
+            <button class="modal-tab-btn active" id="modal-tab-view" onclick="switchModalMode('view')">👁️ Lectura</button>
+            <button class="modal-tab-btn" id="modal-tab-edit" onclick="switchModalMode('edit')">✏️ Editor en RAM</button>
+          </div>
         </div>
         <button class="btn-action-small" style="background:#374151; padding:4px 10px;" onclick="closeFileViewer()">✕ Cerrar</button>
       </div>
       <pre id="modal-file-content" class="modal-code"></pre>
+      <textarea id="modal-file-editor" class="modal-editor" style="display:none;" spellcheck="false" placeholder="Edita código en RAM..."></textarea>
       <div class="modal-footer">
-        <button class="btn-action-small" style="background:var(--accent-indigo); width:100%; padding:8px;" onclick="analyzeCurrentModalFile()">🤖 Analizar este archivo con Gemini</button>
+        <div id="modal-commit-controls" style="display:none; width:100%;">
+          <input type="text" id="modal-commit-msg" class="composer-input" style="width:100%; margin-bottom:6px; font-size:0.8rem;" placeholder="Mensaje del commit (ej: fix: corregir puntero en render)">
+          <button class="btn-action-small" style="background:var(--success); width:100%; padding:8px; font-weight:700;" onclick="commitModalFileToGitHub()">🚀 Crear Commit Directo en GitHub</button>
+        </div>
+        <button class="btn-action-small" id="btn-modal-analyze" style="background:var(--accent-indigo); width:100%; padding:8px;" onclick="analyzeCurrentModalFile()">🤖 Analizar este archivo con Gemini</button>
       </div>
     </div>
   </div>

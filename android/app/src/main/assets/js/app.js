@@ -169,7 +169,11 @@ function appendMessage(role, text, id = null) {
   if (id) div.id = id;
   // Permitir formato basico seguro pero sanitizar contenido
   const safeText = escapeHTML(text).replace(/\n/g, '<br>');
-  div.innerHTML = safeText;
+  if (role === 'gemini' && !id) {
+    div.innerHTML = `${safeText} <button class="btn-speak" onclick="speakText(this.parentElement.innerText)" title="Escuchar respuesta">🔊</button>`;
+  } else {
+    div.innerHTML = safeText;
+  }
   scrollArea.appendChild(div);
   scrollArea.scrollTop = scrollArea.scrollHeight;
 }
@@ -177,10 +181,82 @@ function appendMessage(role, text, id = null) {
 function appendToolCall(toolName, args) {
   const scrollArea = document.getElementById('chat-scroll');
   const div = document.createElement('div');
-  div.className = 'message-card tool-event';
-  div.innerHTML = `⚡ <b>Tool Invocada:</b> <code>${toolName}</code><br><span style="opacity:0.8;">Args: ${JSON.stringify(args)}</span>`;
+  div.className = 'message-card tool-event agent-tool-call';
+  div.innerHTML = `🛠️ <b>Agente Autónomo:</b> <code>${escapeHTML(toolName)}</code><br><span style="opacity:0.85; font-size:0.7rem;">Args: ${escapeHTML(JSON.stringify(args))}</span>`;
   scrollArea.appendChild(div);
   scrollArea.scrollTop = scrollArea.scrollHeight;
+}
+
+// Reconocimiento y Dictado por Voz (Speech-to-Text)
+let speechRecognizer = null;
+let isListening = false;
+
+function toggleVoiceRecognition() {
+  const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRec) {
+    alert('Reconocimiento de voz no soportado en este entorno de WebView.');
+    return;
+  }
+
+  const micBtn = document.getElementById('btn-mic');
+  if (isListening && speechRecognizer) {
+    speechRecognizer.stop();
+    isListening = false;
+    if (micBtn) micBtn.classList.remove('listening');
+    return;
+  }
+
+  try {
+    speechRecognizer = new SpeechRec();
+    speechRecognizer.lang = 'es-ES';
+    speechRecognizer.interimResults = true;
+    speechRecognizer.continuous = false;
+
+    speechRecognizer.onstart = () => {
+      isListening = true;
+      if (micBtn) micBtn.classList.add('listening');
+    };
+
+    speechRecognizer.onresult = (event) => {
+      let text = '';
+      for (let i = event.resultIndex; i < event.results.length; ++i) {
+        text += event.results[i][0].transcript;
+      }
+      const input = document.getElementById('gemini-prompt-input');
+      if (input && text) input.value = text;
+    };
+
+    speechRecognizer.onerror = (e) => {
+      console.warn('Speech recognition error:', e);
+      isListening = false;
+      if (micBtn) micBtn.classList.remove('listening');
+    };
+
+    speechRecognizer.onend = () => {
+      isListening = false;
+      if (micBtn) micBtn.classList.remove('listening');
+    };
+
+    speechRecognizer.start();
+  } catch (err) {
+    console.error(err);
+    isListening = false;
+    if (micBtn) micBtn.classList.remove('listening');
+  }
+}
+
+// Síntesis de Voz (Text-to-Speech)
+function speakText(text) {
+  if (!('speechSynthesis' in window)) {
+    alert('Síntesis de voz no disponible.');
+    return;
+  }
+  window.speechSynthesis.cancel();
+  const clean = text.replace(/🔊/g, '').replace(/<[^>]*>?/gm, '').replace(/```[\s\S]*?```/g, 'bloque de código omitido');
+  const utter = new SpeechSynthesisUtterance(clean);
+  utter.lang = 'es-ES';
+  utter.rate = 1.05;
+  window.speechSynthesis.speak(utter);
 }
 
 // ==============================================================================
@@ -267,9 +343,36 @@ async function openRepoTree(repoName) {
 }
 
 let currentModalFile = { repoName: null, filePath: null };
+let rawFileContentCache = '';
+
+function switchModalMode(mode) {
+  const tabView = document.getElementById('modal-tab-view');
+  const tabEdit = document.getElementById('modal-tab-edit');
+  const preEl = document.getElementById('modal-file-content');
+  const editorEl = document.getElementById('modal-file-editor');
+  const commitControls = document.getElementById('modal-commit-controls');
+
+  if (mode === 'edit') {
+    if (tabView) tabView.classList.remove('active');
+    if (tabEdit) tabEdit.classList.add('active');
+    if (preEl) preEl.style.display = 'none';
+    if (editorEl) {
+      editorEl.style.display = 'block';
+      editorEl.value = rawFileContentCache;
+    }
+    if (commitControls) commitControls.style.display = 'block';
+  } else {
+    if (tabEdit) tabEdit.classList.remove('active');
+    if (tabView) tabView.classList.add('active');
+    if (editorEl) editorEl.style.display = 'none';
+    if (preEl) preEl.style.display = 'block';
+    if (commitControls) commitControls.style.display = 'none';
+  }
+}
 
 async function viewFileInRam(repoName, filePath) {
   currentModalFile = { repoName, filePath };
+  switchModalMode('view');
   const modal = document.getElementById('file-viewer-modal');
   const title = document.getElementById('modal-file-title');
   const meta = document.getElementById('modal-file-meta');
@@ -282,17 +385,63 @@ async function viewFileInRam(repoName, filePath) {
 
   try {
     const res = await GitHubEngine.readFile(repoName, filePath, 1, 300);
+    rawFileContentCache = res.raw_text || res.content || '';
     if (meta) meta.innerText = `${res.showing_lines} de ${res.total_lines} líneas (${repoName})`;
     if (content) content.innerHTML = escapeHTML(res.content);
   } catch (e) {
+    rawFileContentCache = '';
     if (meta) meta.innerText = 'Error';
     if (content) content.innerHTML = `<span style="color:var(--danger)">Error al leer archivo: ${escapeHTML(e.message)}</span>`;
+  }
+}
+
+async function commitModalFileToGitHub() {
+  if (!currentModalFile.repoName || !currentModalFile.filePath) return;
+  const editorEl = document.getElementById('modal-file-editor');
+  const msgInput = document.getElementById('modal-commit-msg');
+  const newContent = editorEl.value;
+  const message = msgInput.value.trim() || `update: ${currentModalFile.filePath} via Antigravity Mobile Hub`;
+
+  const confirmed = confirm(`¿Confirmas crear un nuevo commit en '${currentModalFile.repoName}' para el archivo '${currentModalFile.filePath}' directamente desde la memoria RAM?`);
+  if (!confirmed) return;
+
+  const meta = document.getElementById('modal-file-meta');
+  if (meta) meta.innerText = 'Enviando commit a GitHub...';
+
+  try {
+    const url = GitHubEngine.getApiUrl(`/api/commit?token=${encodeURIComponent(BridgeClient.token)}`);
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        repo: currentModalFile.repoName,
+        path: currentModalFile.filePath,
+        content: newContent,
+        message: message
+      })
+    });
+
+    const data = await res.json();
+    if (res.ok && data.status === 'success') {
+      rawFileContentCache = newContent;
+      alert(`✅ Commit creado con éxito en GitHub!\nSHA: ${data.commit_sha ? data.commit_sha.substring(0, 7) : 'OK'}`);
+      if (meta) meta.innerText = `Commit guardado (${data.commit_sha ? data.commit_sha.substring(0, 7) : 'OK'})`;
+      switchModalMode('view');
+      document.getElementById('modal-file-content').innerHTML = escapeHTML(newContent);
+    } else {
+      alert(`❌ Error al crear commit: ${data.error || 'Fallo desconocido'}`);
+      if (meta) meta.innerText = 'Error al commitear';
+    }
+  } catch (e) {
+    alert(`❌ Error de conexión al crear commit: ${e.message}`);
+    if (meta) meta.innerText = 'Error';
   }
 }
 
 function closeFileViewer() {
   const modal = document.getElementById('file-viewer-modal');
   if (modal) modal.style.display = 'none';
+  switchModalMode('view');
 }
 
 function analyzeCurrentModalFile() {
@@ -349,6 +498,49 @@ function copyTerminalOutput() {
 }
 
 // ==============================================================================
+// Manejo de Telemetría PC en Vivo (Hardware Monitoring)
+// ==============================================================================
+
+async function fetchTelemetry() {
+  try {
+    const url = GitHubEngine.getApiUrl(`/api/telemetry?token=${encodeURIComponent(BridgeClient.token)}`);
+    const res = await fetch(url);
+    if (res.ok) {
+      const data = await res.json();
+      updateTelemetryUI(data);
+    }
+  } catch (e) {}
+}
+
+function updateTelemetryUI(data) {
+  const bar = document.getElementById('telemetry-bar');
+  if (bar) bar.style.display = 'flex';
+
+  const cpuEl = document.getElementById('telem-cpu');
+  const ramEl = document.getElementById('telem-ram');
+  const pwrEl = document.getElementById('telem-pwr');
+
+  if (cpuEl && data.cpu_percent !== undefined) {
+    cpuEl.innerText = `💻 CPU: ${data.cpu_percent}%`;
+    cpuEl.classList.toggle('alert', data.cpu_percent > 85);
+  }
+  if (ramEl && data.ram_used_gb !== undefined) {
+    ramEl.innerText = `🧠 RAM: ${data.ram_used_gb}/${data.ram_total_gb}GB (${data.ram_percent}%)`;
+    ramEl.classList.toggle('alert', data.ram_percent > 90);
+  }
+  if (pwrEl && data.ac_connected !== undefined) {
+    pwrEl.innerText = `⚡ AC: ${data.ac_connected ? 'Conectado' : data.battery_percent + '%'}`;
+  }
+}
+
+let telemetryTimer = null;
+function startTelemetryLoop() {
+  if (telemetryTimer) clearInterval(telemetryTimer);
+  fetchTelemetry();
+  telemetryTimer = setInterval(fetchTelemetry, 5000);
+}
+
+// ==============================================================================
 // Manejo de Eventos del Puente (WebSocket Streaming)
 // ==============================================================================
 
@@ -359,9 +551,15 @@ function handleBridgeEvents(data) {
   if (data.event === 'bridge_connected') {
     if (hostBadge) hostBadge.classList.add('connected');
     if (hostLabel) hostLabel.innerText = 'Enlazado (PC)';
+    startTelemetryLoop();
   } else if (data.event === 'bridge_disconnected') {
     if (hostBadge) hostBadge.classList.remove('connected');
     if (hostLabel) hostLabel.innerText = 'Desconectado';
+    if (telemetryTimer) clearInterval(telemetryTimer);
+    const bar = document.getElementById('telemetry-bar');
+    if (bar) bar.style.display = 'none';
+  } else if (data.event === 'telemetry_update') {
+    updateTelemetryUI(data.data);
   } else if (data.event === 'stdout_chunk') {
     const term = document.getElementById('term-stream');
     if (term) {

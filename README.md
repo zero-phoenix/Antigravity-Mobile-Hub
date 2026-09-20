@@ -1,14 +1,16 @@
-# ⚡ Antigravity Mobile Hub
+# ⚡ Antigravity Mobile Hub — Versión Suprema
 
 [![Android Build](https://github.com/zero-phoenix/Antigravity-Mobile-Hub/actions/workflows/release_apk.yml/badge.svg)](https://github.com/zero-phoenix/Antigravity-Mobile-Hub/actions/workflows/release_apk.yml)
 [![GitHub Release](https://img.shields.io/github/v/release/zero-phoenix/Antigravity-Mobile-Hub?color=blue&label=Release)](https://github.com/zero-phoenix/Antigravity-Mobile-Hub/releases)
-[![Android Compatibility](https://img.shields.io/badge/Android-7.0%2B%20(API%2024--35)-green)](https://github.com/zero-phoenix/Antigravity-Mobile-Hub)
+[![Android Compatibility](https://img.shields.io/badge/Android-7.0%2B%20(API%2024--36)-green)](https://github.com/zero-phoenix/Antigravity-Mobile-Hub)
 [![License](https://img.shields.io/badge/License-MIT-purple.svg)](LICENSE)
 
-**Antigravity Mobile Hub** es una aplicación para Android diseñada con estética **Cyber-Dark OLED** que conecta de forma coordinada y sin límites:
-1. **Tu cuenta de GitHub (`zero-phoenix`)**: Lectura en memoria RAM sin descarga de repositorios privados propios y de cualquier proyecto de terceros (`vitasdk`, `torvalds`, etc.).
-2. **Tu cuenta de Google Gemini**: Inferencia con modelos `gemini-2.5-flash`, `gemini-2.5-pro` y `gemini-3.8-flash`, con control de Thinking Budget y modo de **Grounding Estricto** (cero alucinaciones).
-3. **Google Antigravity en la PC**: Enlace bidireccional en tiempo real con PowerShell en Windows, ejecución de tareas autónomas y notificaciones push al móvil.
+**Antigravity Mobile Hub (Versión Suprema v2.0)** es una suite de ingeniería agéntica y desarrollo móvil para Android con interfaz Cyber-OLED ultrarrápida que conecta:
+1. **GitHub Cloud Zero-Download + In-Memory Commits**: Lee código, explora árboles completos y **crea o edita commits en GitHub directamente en RAM** sin clonar ni gastar almacenamiento del teléfono.
+2. **Gemini Autonomous Agent (Function Calling)**: Agente autónomo capaz de inspeccionar hardware, leer código en la nube y delegar comandos a la PC Windows.
+3. **Dictado y Síntesis por Voz (Voice-Driven Lab)**: Dicta prompts con el micrófono y escucha respuestas habladas con síntesis de voz nativa.
+4. **Telemetría PC en Vivo**: Monitor en tiempo real de uso de CPU, RAM y energía en Windows vía ctypes ultrarrápido sin librerías externas.
+5. **PowerShell en Vivo**: Terminal remota interactiva en tiempo real.
 
 ---
 
@@ -17,7 +19,7 @@
 El producto principal es el binario compilado listo para instalar:
 
 1. Ve a la sección de **[Releases](https://github.com/zero-phoenix/Antigravity-Mobile-Hub/releases)** de este repositorio.
-2. Descarga el archivo **`Antigravity-Mobile-Hub-v1.1.1.apk`** (Versión Simplificada & Popperiana) en tu celular.
+2. Descarga el archivo **`Antigravity-Mobile-Hub-v2.0.0.apk`** (Versión Suprema) en tu celular.
 3. Abre el archivo descargado en tu teléfono y pulsa **Instalar**.
 4. ¡Listo! La app se instalará con su propio icono en el launcher de Android y se ejecutará a pantalla completa sin barras de navegador.
 

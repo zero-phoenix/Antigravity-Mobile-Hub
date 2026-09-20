@@ -16,6 +16,7 @@ BASE_DIR = pathlib.Path(__file__).parent.parent.resolve()
 APP_DIR = BASE_DIR / "android-app"
 SYS_PATH = BASE_DIR / "github-cloud"
 sys.path.insert(0, str(SYS_PATH))
+sys.path.insert(0, str(BASE_DIR))
 
 import cloud_inspector
 
@@ -104,6 +105,32 @@ class PopperianAuditTestSuite(unittest.TestCase):
 
         self.assertIn("function escapeHTML", app_js, "Falta la función de escape HTML en app.js")
         self.assertIn("escapeHTML(res.content)", app_js, "res.content no está siendo sanitizado")
+
+    def test_falsify_telemetry_schema(self):
+        """
+        Falsación de la Hipótesis de Telemetría:
+        ¿get_system_telemetry() devuelve métricas de CPU y RAM válidas sin excepciones?
+        """
+        from bridge.gateway import get_system_telemetry
+        telem = get_system_telemetry()
+        self.assertIsInstance(telem, dict)
+        self.assertIn("cpu_percent", telem)
+        self.assertIn("ram_percent", telem)
+        self.assertIn("ram_total_gb", telem)
+        self.assertIn("ram_used_gb", telem)
+        self.assertGreaterEqual(telem["ram_total_gb"], 1.0)
+        self.assertGreaterEqual(telem["ram_percent"], 0)
+        self.assertLessEqual(telem["ram_percent"], 100)
+
+    def test_falsify_supreme_endpoints_registration(self):
+        """
+        Falsación de la Hipótesis de Enrutamiento Supremo:
+        ¿Las rutas /api/telemetry y /api/commit están declaradas en Starlette?
+        """
+        from bridge.gateway import routes
+        path_list = [getattr(r, "path", None) for r in routes]
+        self.assertIn("/api/telemetry", path_list, "Ruta /api/telemetry no registrada")
+        self.assertIn("/api/commit", path_list, "Ruta /api/commit no registrada")
 
 if __name__ == "__main__":
     if sys.platform == "win32":

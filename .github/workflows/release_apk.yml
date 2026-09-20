@@ -62,9 +62,9 @@ jobs:
           draft: false
           prerelease: false
           body: |
-            ## ⚡ Antigravity Mobile Hub ${{ steps.prepare_apk.outputs.tag }} — Release Oficial para Android
+            ## ⚡ Antigravity Mobile Hub ${{ steps.prepare_apk.outputs.tag }} — Gemini 3.8 Flash High Edition
 
-            Aplicación Android de ingeniería agéntica conectada simultáneamente a **GitHub** (`zero-phoenix`), **Google Gemini 2.0** y **Google Antigravity en la PC**.
+            Aplicación Android de ingeniería agéntica conectada simultáneamente a **GitHub** (`zero-phoenix`), **Google Gemini 3.8 Flash High** y **Google Antigravity en la PC anfitriona**.
 
             ### 📲 Descarga e Instalación
             - **Descarga el archivo adjunto**: [`${{ steps.prepare_apk.outputs.apk_path }}`](https://github.com/${{ github.repository }}/releases/download/${{ steps.prepare_apk.outputs.tag }}/${{ steps.prepare_apk.outputs.apk_path }})
@@ -72,11 +72,11 @@ jobs:
 
             ---
 
-            ### 🚀 Novedades de la Versión v2.1.0
-            - **🔑 Autenticación por Código de Aplicación (Cero API Keys)**: Olvídate de ingresar claves a mano. Inicia sesión con el **PIN de Emparejamiento de 6 dígitos** con tu PC o mediante **GitHub Device Code Flow**.
-            - **⚡ Gemini 2.0 Flash Oficial (Ultra Rápido)**: Modelo insignia de Google con latencia ultrabaja (<400ms) y streaming token a token en tiempo real sin esperas.
+            ### 🚀 Novedades de la Versión v2.2.0
+            - **🧠 Google Gemini 3.8 Flash High**: Activación del modelo `gemini-3.8-flash` con **Thinking Budget = 2048 (High)** como motor prioritario y exclusivo.
+            - **🔑 API Key Oficial Integrada**: Conexión con el proyecto `918764510534` persistida en la PC sin requerir ingreso manual de claves en el celular.
+            - **⚡ Streaming y Resiliencia**: Streaming token a token en tiempo real vía WebSocket y tolerancia automática ante picos de demanda del endpoint (503).
             - **🌐 Cuentas Sincronizadas**: Detección y vinculación automática de tus cuentas activas de Google (`david.chavez.nge@gmail.com`) y GitHub (`@zero-phoenix`).
-            - **🧠 Control de Modelos y Thinking Budget**: Soporte para `Gemini 2.0 Flash`, `Gemini 2.0 Flash Lite`, `Gemini 1.5 Flash` y `Gemini 1.5 Pro`.
-            - **☁️ Explorador Universal de Repositorios (Zero-Download)**: Lectura y edición directa de archivos con commits en RAM sin gastar memoria física.
-            - **💻 Terminal PowerShell Remota**: Ejecución de comandos en la PC con streaming en vivo.
-            - **🛡️ Auditoría Popperiana Completa**: Validación empírica en hardware Samsung Galaxy físico con Android 16.
+            - **☁️ Explorador Universal de Repositorios (Zero-Download)**: Lectura directa de árboles, ramas y commits en RAM sin descargar repositorios.
+            - **💻 Terminal PowerShell Remota**: Ejecución remota de comandos en Windows en tiempo real desde el móvil.
+            - **🛡️ Auditoría Popperiana Completa**: Verificado en dispositivo físico Samsung Galaxy A07 (Android 16, API 36).

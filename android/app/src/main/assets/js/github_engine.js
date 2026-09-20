@@ -34,6 +34,14 @@ const GitHubEngine = {
     return { repo: `${this.defaultOwner}/yabausevita`, path: null };
   },
 
+  getApiUrl(endpoint) {
+    if (window.location.protocol.startsWith('http')) {
+      return endpoint;
+    }
+    const host = BridgeClient.serverHost || '192.168.18.113:8765';
+    return `http://${host}${endpoint}`;
+  },
+
   async getHeaders() {
     const headers = { 'Accept': 'application/vnd.github.v3+json' };
     if (this.token) {
@@ -52,7 +60,7 @@ const GitHubEngine = {
     // Si la PC está conectada, aprovechar el gateway con token de keyring
     if (BridgeClient.isConnected()) {
       try {
-        const res = await fetch(`/api/repos?owner=${encodeURIComponent(owner)}&token=${encodeURIComponent(BridgeClient.token)}`);
+        const res = await fetch(this.getApiUrl(`/api/repos?owner=${encodeURIComponent(owner)}&token=${encodeURIComponent(BridgeClient.token)}`));
         if (res.ok) {
           const data = await res.json();
           const list = data.repositories || [];
@@ -82,7 +90,7 @@ const GitHubEngine = {
     if (BridgeClient.isConnected()) {
       try {
         const branchParam = branch ? `&branch=${encodeURIComponent(branch)}` : '';
-        const res = await fetch(`/api/tree?repo=${encodeURIComponent(repo)}${branchParam}&token=${encodeURIComponent(BridgeClient.token)}`);
+        const res = await fetch(this.getApiUrl(`/api/tree?repo=${encodeURIComponent(repo)}${branchParam}&token=${encodeURIComponent(BridgeClient.token)}`));
         if (res.ok) {
           const data = await res.json();
           this.cache.set(cacheKey, data);
@@ -124,7 +132,7 @@ const GitHubEngine = {
 
     if (BridgeClient.isConnected()) {
       try {
-        const res = await fetch(`/api/file?repo=${encodeURIComponent(repo)}&path=${encodeURIComponent(targetPath)}&start=${startLine}&end=${endLine}&token=${encodeURIComponent(BridgeClient.token)}`);
+        const res = await fetch(this.getApiUrl(`/api/file?repo=${encodeURIComponent(repo)}&path=${encodeURIComponent(targetPath)}&start=${startLine}&end=${endLine}&token=${encodeURIComponent(BridgeClient.token)}`));
         if (res.ok) {
           const data = await res.json();
           this.cache.set(cacheKey, data);

@@ -246,14 +246,17 @@ async function openRepoTree(repoName) {
 
     tree.files.forEach(f => {
       const item = document.createElement('div');
-      item.style.padding = '6px 8px';
+      item.style.padding = '10px 8px';
       item.style.borderBottom = '1px solid var(--border-subtle)';
       item.style.fontSize = 'var(--code-font-size)';
       item.style.fontFamily = 'var(--font-mono)';
       item.style.display = 'flex';
       item.style.justifyContent = 'space-between';
+      item.style.alignItems = 'center';
+      item.style.cursor = 'pointer';
+      item.onclick = () => viewFileInRam(repoName, f.path);
       item.innerHTML = `
-        <span style="color:var(--accent-cyan); cursor:pointer;" onclick="viewFileInRam('${repoName}', '${f.path}')">📄 ${f.path}</span>
+        <span style="color:var(--accent-cyan); display:flex; align-items:center; gap:6px;">📄 ${f.path}</span>
         <span style="color:var(--text-dim); font-size:0.75rem;">${f.size_bytes}B</span>
       `;
       listEl.appendChild(item);

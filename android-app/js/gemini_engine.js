@@ -1,6 +1,6 @@
 /**
  * Gemini Engine: Control de modelos, Thinking Budget y Grounding Estricto.
- * Actualizado a la familia oficial Gemini 2.0 (Predeterminado: gemini-2.0-flash).
+ * Actualizado a Google Gemini 3.8 Flash High (Predeterminado: gemini-3.8-flash).
  */
 
 const GeminiEngine = {
@@ -8,12 +8,12 @@ const GeminiEngine = {
   config: {
     model: (function() {
       const saved = localStorage.getItem('gemini_model');
-      if (!saved || saved.includes('2.5') || saved.includes('3.8')) {
-        return 'gemini-2.0-flash';
+      if (!saved || saved === 'gemini-2.0-flash' || saved === 'gemini-1.5-flash') {
+        return 'gemini-3.8-flash';
       }
       return saved;
     })(),
-    thinkingBudget: parseInt(localStorage.getItem('gemini_thinking') || '0', 10), // 0 = Rápido, 2048 = Analítico, 8192 = Deep Research
+    thinkingBudget: parseInt(localStorage.getItem('gemini_thinking') || '2048', 10), // 2048 = High (Predeterminado)
     temperature: parseFloat(localStorage.getItem('gemini_temp') || '0.2'),
     strictGrounding: localStorage.getItem('gemini_strict') !== 'false', // True por defecto (cero alucinaciones)
     apiKey: localStorage.getItem('gemini_api_key') || ''
@@ -21,10 +21,9 @@ const GeminiEngine = {
 
   // Modelos oficiales vigentes de Google
   MODELS: [
-    { id: 'gemini-2.0-flash', name: '⚡ Gemini 2.0 Flash', desc: 'Ultrarrápido, latencia mínima, streaming token a token (Predeterminado)' },
-    { id: 'gemini-2.0-flash-lite', name: '🚀 Gemini 2.0 Flash Lite', desc: 'Máxima eficiencia y velocidad para consultas frecuentes' },
-    { id: 'gemini-1.5-flash', name: '⚡ Gemini 1.5 Flash', desc: 'Rápido, versátil y multimodal' },
-    { id: 'gemini-1.5-pro', name: '🧠 Gemini 1.5 Pro', desc: 'Razonamiento complejo y contexto extendido' }
+    { id: 'gemini-3.8-flash', name: '⚡ Gemini 3.8 Flash High', desc: 'Google Gemini 3.8 Flash High - Máxima velocidad con razonamiento profundo (Predeterminado)' },
+    { id: 'gemini-2.5-flash', name: '🚀 Gemini 2.5 Flash', desc: 'Alta velocidad para tareas directas' },
+    { id: 'gemini-2.5-pro', name: '🧠 Gemini 2.5 Pro', desc: 'Razonamiento complejo multimodal' }
   ],
 
   saveConfig() {

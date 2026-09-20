@@ -24,6 +24,31 @@ WORKSPACE_DIR = BRIDGE_DIR.parent.resolve()
 APP_DIR = WORKSPACE_DIR / "android-app"
 sys.path.insert(0, str(WORKSPACE_DIR / "github-cloud"))
 
+# Carga automática de configuración local (.env)
+env_path = WORKSPACE_DIR / ".env"
+if env_path.exists():
+    for line in env_path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if line and not line.startswith("#") and "=" in line:
+            k, v = line.split("=", 1)
+            k, v = k.strip(), v.strip().strip("'\"")
+            if k:
+                os.environ[k] = v
+
+# Cargar GEMINI_API_KEY desde entorno de usuario de Windows si no está en proceso
+if not os.environ.get("GEMINI_API_KEY"):
+    import winreg
+    try:
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Environment") as key:
+            val, _ = winreg.QueryValueEx(key, "GEMINI_API_KEY")
+            if val:
+                os.environ["GEMINI_API_KEY"] = val
+    except Exception:
+        pass
+
+os.environ.setdefault("GEMINI_MODEL", "gemini-3.8-flash")
+os.environ.setdefault("GEMINI_THINKING_BUDGET", "2048")
+
 import cloud_inspector
 
 from starlette.applications import Starlette
@@ -279,7 +304,8 @@ async def api_auth_session(request):
         "has_github_token": bool(github_token),
         "pairing_pin": PAIRING_PIN,
         "device_name": socket.gethostname(),
-        "gemini_model_default": "gemini-2.0-flash",
+        "gemini_model_default": "gemini-3.8-flash",
+        "gemini_model_name": "⚡ Gemini 3.8 Flash High",
     })
 
 async def api_auth_pair(request):
@@ -420,17 +446,19 @@ async def websocket_endpoint(websocket: WebSocket):
             elif msg_type == "chat":
                 prompt = data.get("prompt", "").strip()
                 options = data.get("options", {})
-                target_model = options.get("model", "gemini-2.0-flash")
-                # Sanitizar cualquier modelo inexistente como 2.5
-                if "2.5" in target_model or "3.8" in target_model:
-                    target_model = "gemini-2.0-flash"
+                
+                # Modelo prioritario: Gemini 3.8 Flash High solicitado por el usuario
+                target_model = options.get("model") or os.environ.get("GEMINI_MODEL", "gemini-3.8-flash")
+                if "flash" in target_model.lower() or "3.8" in target_model or "2.0" in target_model:
+                    target_model = "gemini-3.8-flash"
 
                 temp = float(options.get("temperature", 0.2))
                 strict = options.get("strict", True)
+                thinking_budget = int(options.get("thinking") or os.environ.get("GEMINI_THINKING_BUDGET", "2048"))
                 if not prompt:
                     continue
 
-                await websocket.send_json({"event": "chat_thinking", "prompt": prompt})
+                await websocket.send_json({"event": "chat_thinking", "prompt": prompt, "model": "Gemini 3.8 Flash High"})
 
                 gemini_key = os.environ.get("GEMINI_API_KEY")
 
@@ -467,7 +495,7 @@ async def websocket_endpoint(websocket: WebSocket):
                     await websocket.send_json({"event": "chat_response", "text": res_text})
                     continue
 
-                # Ejecutar consulta con Gemini y Cloud Tools
+                # Ejecutar consulta con Gemini 3.8 Flash High y Cloud Tools
                 try:
                     from google import genai
                     from google.genai import types
@@ -501,7 +529,7 @@ async def websocket_endpoint(websocket: WebSocket):
                         """
                         return get_system_telemetry()
 
-                    client = genai.Client()
+                    client = genai.Client(api_key=gemini_key)
                     tools = [
                         cloud_inspector.cloud_list_repositories,
                         cloud_inspector.cloud_get_tree,
@@ -519,16 +547,18 @@ async def websocket_endpoint(websocket: WebSocket):
                     active_tools_map["delegate_to_desktop"] = delegate_to_desktop
 
                     system_instruction = (
-                        "Eres Antigravity Mobile Hub Supremo. El usuario te habla desde su teléfono Android conectado a su cuenta de GitHub (zero-phoenix) y su PC. "
+                        "Eres Antigravity Mobile Hub Supremo impulsado por Google Gemini 3.8 Flash High. "
+                        "El usuario te habla desde su teléfono Android conectado a su cuenta de GitHub (zero-phoenix) y su PC anfitriona Windows. "
                         "Tienes acceso a inspeccionar repositorios en la nube (cloud_*) propios y de terceros, crear o actualizar archivos y commits directos "
                         "mediante cloud_create_or_update_file, inspeccionar la salud del equipo mediante inspect_system_telemetry, y DELEGAR comandos "
                         "a la PC de Windows mediante 'delegate_to_desktop' para ejecutar git, compilaciones, tests o inspecciones locales. "
+                        "Sé conciso, directo, amigable y sumamente preciso."
                     )
                     if strict:
                         system_instruction += (
-                            "POLÍTICA ESTRICTA DE GROUNDING: Tienes terminantemente prohibido inventar código o asumir APIs inexistentes. "
+                            "\nPOLÍTICA ESTRICTA DE GROUNDING: Tienes terminantemente prohibido inventar código o asumir APIs inexistentes. "
                             "Básate EXCLUSIVAMENTE en lo verificado a través de las herramientas de inspección o comandos de la PC. "
-                            "Cita siempre archivo y línea de referencia."
+                            "Cita siempre archivo y línea de referencia si analizas código."
                         )
 
                     chat = client.chats.create(
@@ -536,11 +566,24 @@ async def websocket_endpoint(websocket: WebSocket):
                         config=types.GenerateContentConfig(
                             system_instruction=system_instruction,
                             temperature=temp,
+                            thinking_config=types.ThinkingConfig(thinking_budget=thinking_budget),
                             tools=tools,
                         )
                     )
 
-                    response = chat.send_message(prompt)
+                    # Envío con reintentos para soportar picos transitorios de demanda (503)
+                    response = None
+                    for attempt in range(3):
+                        try:
+                            response = await asyncio.to_thread(chat.send_message, prompt)
+                            break
+                        except Exception as e_send:
+                            err_msg = str(e_send)
+                            if ("503" in err_msg or "UNAVAILABLE" in err_msg or "demand" in err_msg) and attempt < 2:
+                                await asyncio.sleep(1.2)
+                                continue
+                            raise e_send
+
                     turn = 0
                     while turn < 10 and response.function_calls:
                         turn += 1
@@ -566,7 +609,16 @@ async def websocket_endpoint(websocket: WebSocket):
                                 )
                             )
 
-                        response = chat.send_message(tool_responses)
+                        for attempt in range(3):
+                            try:
+                                response = await asyncio.to_thread(chat.send_message, tool_responses)
+                                break
+                            except Exception as e_send_tool:
+                                err_msg = str(e_send_tool)
+                                if ("503" in err_msg or "UNAVAILABLE" in err_msg or "demand" in err_msg) and attempt < 2:
+                                    await asyncio.sleep(1.2)
+                                    continue
+                                raise e_send_tool
 
                     final_text = response.text or ""
                     # Streaming token a token al celular

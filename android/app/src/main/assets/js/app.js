@@ -106,8 +106,8 @@ function updateThinkingPillLabel() {
   const pill = document.getElementById('pill-thinking-mode');
   if (pill) {
     const budget = GeminiEngine.config.thinkingBudget;
-    if (budget === 0) pill.innerText = '⚡ Rápido (0)';
-    else if (budget <= 2048) pill.innerText = '🧠 Analítico (2k)';
+    if (budget === 0) pill.innerText = '⚡ Flash (Rápido)';
+    else if (budget <= 2048) pill.innerText = '⚡ Flash High (2k)';
     else pill.innerText = '🔬 Deep Research (8k)';
   }
 }

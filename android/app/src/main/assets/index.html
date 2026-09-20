@@ -37,8 +37,8 @@
 
   <!-- Quick Model & Grounding Bar (Visible en Gemini) -->
   <div class="gemini-quick-bar" id="gemini-subbar">
-    <div class="model-pill" id="pill-model-name" onclick="cycleModel()">⚡ Gemini 2.0 Flash</div>
-    <div class="thinking-pill" id="pill-thinking-mode" onclick="cycleThinkingMode()">⚡ Rápido (0)</div>
+    <div class="model-pill" id="pill-model-name" onclick="cycleModel()">⚡ Gemini 3.8 Flash High</div>
+    <div class="thinking-pill" id="pill-thinking-mode" onclick="cycleThinkingMode()">⚡ High (2048)</div>
     <div class="grounding-toggle active" id="grounding-badge" onclick="toggleGrounding()">🛡️ Grounding: Estricto</div>
   </div>
 
@@ -182,10 +182,9 @@
       <div class="settings-section">
         <label class="settings-label">🧠 Modelo de Inteligencia Google Gemini:</label>
         <select id="setting-gemini-model" class="composer-input" style="width:100%; border-radius:6px; margin-bottom:10px;" onchange="changeGeminiModel(this.value)">
-          <option value="gemini-2.0-flash">⚡ Gemini 2.0 Flash (Ultra rápido, baja latencia - Predeterminado)</option>
-          <option value="gemini-2.0-flash-lite">🚀 Gemini 2.0 Flash Lite (Máxima velocidad)</option>
-          <option value="gemini-1.5-flash">⚡ Gemini 1.5 Flash</option>
-          <option value="gemini-1.5-pro">🧠 Gemini 1.5 Pro (Razonamiento profundo)</option>
+          <option value="gemini-3.8-flash" selected>⚡ Gemini 3.8 Flash High (Razonamiento profundo + Ultra rápido - Predeterminado)</option>
+          <option value="gemini-2.5-flash">🚀 Gemini 2.5 Flash (Alta velocidad)</option>
+          <option value="gemini-2.5-pro">🧠 Gemini 2.5 Pro (Razonamiento multimodal)</option>
         </select>
       </div>
 

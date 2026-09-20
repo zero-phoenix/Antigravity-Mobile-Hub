@@ -16,6 +16,7 @@ import asyncio
 import subprocess
 import socket
 import pathlib
+import threading
 from typing import Dict, Any, List
 
 # Asegurar que los módulos vecinos estén en el path
@@ -50,6 +51,10 @@ os.environ.setdefault("GEMINI_MODEL", "gemini-3.8-flash")
 os.environ.setdefault("GEMINI_THINKING_BUDGET", "2048")
 
 import cloud_inspector
+from bridge.tunnel_manager import tunnel_manager
+
+# Auto-iniciar túnel Cloudflare en segundo plano para acceso mundial (Japón, datos móviles, etc.)
+threading.Thread(target=lambda: tunnel_manager.start(wait_timeout=25), daemon=True).start()
 
 from starlette.applications import Starlette
 from starlette.responses import JSONResponse, HTMLResponse, Response, FileResponse
@@ -367,7 +372,19 @@ async def api_status(request):
         "workspace": str(WORKSPACE_DIR),
         "gemini_configured": has_gemini,
         "github_authenticated": has_github,
+        "tunnel": tunnel_manager.get_info(),
     })
+
+async def api_tunnel_info(request):
+    """Devuelve el estado del túnel Cloudflare global y la URL pública."""
+    return JSONResponse(tunnel_manager.get_info())
+
+async def api_tunnel_restart(request):
+    """Reinicia el túnel Cloudflare para generar una nueva URL pública."""
+    if not verify_token(request):
+        return JSONResponse({"error": "No autorizado"}, status_code=401)
+    tunnel_manager.start(wait_timeout=25)
+    return JSONResponse(tunnel_manager.get_info())
 
 async def api_repos(request):
     """Devuelve los repositorios de GitHub en la nube del usuario."""
@@ -858,6 +875,8 @@ routes = [
     Route("/api/projects", api_projects),
     Route("/api/projects/switch", api_projects_switch, methods=["POST"]),
     Route("/api/gemini/history", api_gemini_history),
+    Route("/api/tunnel/info", api_tunnel_info),
+    Route("/api/tunnel/restart", api_tunnel_restart, methods=["POST"]),
     WebSocketRoute("/ws/stream", websocket_endpoint),
     Mount("/css", StaticFiles(directory=str(APP_DIR / "css")), name="css"),
     Mount("/js", StaticFiles(directory=str(APP_DIR / "js")), name="js"),

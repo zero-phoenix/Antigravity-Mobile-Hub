@@ -17,7 +17,7 @@
     <div class="brand-wrapper">
       <span class="brand-icon">⚡</span>
       <span class="brand-title">Antigravity</span>
-      <span class="badge-tag">Hub Supremo v2.3</span>
+      <span class="badge-tag">Hub Supremo v2.4 (Global)</span>
     </div>
     <div class="header-actions">
       <div class="host-badge" id="host-badge" onclick="switchTab('view-settings', document.getElementById('tab-btn-settings'))" title="Toca para configurar conexión">
@@ -57,8 +57,8 @@
 
       <div class="chat-scroll-area" id="chat-scroll">
         <div class="message-card gemini">
-          👋 <b>Bienvenido a Antigravity Mobile Supremo v2.0.</b><br>
-          Estoy conectado a tu sesión de Windows, a la telemetría de tu PC y a GitHub en la nube. Puedes dictarme por voz, pedirme leer o editar código en RAM, y ejecutar tareas en tu computadora.
+          👋 <b>Bienvenido a Antigravity Mobile Supremo v2.4 (Global Edition).</b><br>
+          Conectado globalmente a tu PC en Perú desde cualquier parte del mundo (Japón, datos móviles o Wi-Fi), a la telemetría del sistema y a GitHub en la nube.
         </div>
       </div>
 
@@ -169,7 +169,7 @@
 
     <!-- VISTA 4: Ajustes y Configuración -->
     <section id="view-settings" class="view-pane">
-      <h3 style="font-size:1.1rem; font-weight:700; color:#fff; margin-bottom:14px;">⚙️ Ajustes y Cuentas Vinculadas</h3>
+      <h3 style="font-size:1.1rem; font-weight:700; color:#fff; margin-bottom:14px;">⚙️ Ajustes y Conectividad Global</h3>
       
       <!-- Feedback de prueba de conexión / emparejamiento -->
       <div id="conn-test-feedback" style="display:none; padding:10px 14px; border-radius:8px; margin-bottom:14px; font-size:0.85rem; border:1px solid var(--border-subtle);"></div>
@@ -212,12 +212,21 @@
         </div>
       </div>
 
-      <!-- Conexión Host PC (Antigravity Bridge) -->
+      <!-- Modo de Conexión & Enlace Multi-Red (Local Wi-Fi Perú / Remoto Global Japón) -->
       <div class="settings-section">
-        <label class="settings-label">💻 Servidor Host PC (Antigravity Bridge):</label>
+        <label class="settings-label">🌍 Modo de Conexión (Local Perú vs Remoto Japón / 5G):</label>
         <div style="display:flex; gap:6px; margin-bottom:8px;">
-          <input type="text" id="input-bridge-host" class="composer-input" style="flex:1; border-radius:6px;" placeholder="192.168.18.113:8765">
-          <button class="btn-action-small" style="background:var(--accent-indigo);" onclick="testHostConnection()">🔌 Conectar</button>
+          <button class="btn-action-small" id="btn-mode-local" style="flex:1; background:var(--bg-surface-elevated);" onclick="setConnectionMode('local')">🏠 Wi-Fi Local (Perú)</button>
+          <button class="btn-action-small" id="btn-mode-global" style="flex:1; background:var(--accent-indigo); font-weight:700;" onclick="setConnectionMode('global')">🌐 Global (Japón/5G)</button>
+        </div>
+
+        <div style="display:flex; gap:6px; margin-bottom:8px;">
+          <input type="text" id="input-bridge-host" class="composer-input" style="flex:1; border-radius:6px; font-size:0.8rem;" placeholder="192.168.18.113:8765 o xxx.trycloudflare.com">
+          <button class="btn-action-small" style="background:var(--accent-indigo);" onclick="testHostConnection()">🔌 Probar</button>
+        </div>
+
+        <div style="display:flex; gap:6px;">
+          <button class="btn-action-small" style="flex:1; background:#24292e; border:1px solid var(--accent-indigo);" onclick="triggerRemoteDiscovery()">🔍 Descubrir PC en la Nube (GitHub Gist)</button>
         </div>
       </div>
 

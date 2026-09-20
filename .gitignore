@@ -25,3 +25,5 @@ Desktop.ini
 $RECYCLE.BIN/
 *.bak
 *.png
+tools/
+*.exe

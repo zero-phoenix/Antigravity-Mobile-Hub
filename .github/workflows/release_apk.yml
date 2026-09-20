@@ -62,9 +62,9 @@ jobs:
           draft: false
           prerelease: false
           body: |
-            ## ⚡ Antigravity Mobile Hub ${{ steps.prepare_apk.outputs.tag }} — Wi-Fi Hub & Project Navigator Edition
+            ## ⚡ Antigravity Mobile Hub ${{ steps.prepare_apk.outputs.tag }} — Global Remote Multi-Connection Edition
 
-            Aplicación Android de ingeniería agéntica conectada simultáneamente a **GitHub** (`zero-phoenix`), **Google Gemini 3.8 Flash High** y **Google Antigravity en la PC anfitriona** a través de Wi-Fi local.
+            Aplicación Android de ingeniería agéntica conectada simultáneamente a **GitHub** (`zero-phoenix`), **Google Gemini 3.8 Flash High** y **Google Antigravity en la PC anfitriona** desde cualquier lugar del mundo (ej. PC en Perú y celular en Japón o con datos móviles 5G).
 
             ### 📲 Descarga e Instalación
             - **Descarga el archivo adjunto**: [`${{ steps.prepare_apk.outputs.apk_path }}`](https://github.com/${{ github.repository }}/releases/download/${{ steps.prepare_apk.outputs.tag }}/${{ steps.prepare_apk.outputs.apk_path }})
@@ -72,10 +72,11 @@ jobs:
 
             ---
 
-            ### 🚀 Novedades de la Versión v2.3.0
-            - **📶 Conexión Wi-Fi Autónoma (Cero Cables USB)**: Comunicación directa con el servidor Gateway de la PC (`192.168.18.113:8765`) en red local. Cero dependencia de túneles ADB o cable USB.
-            - **📜 Historial Completo de Sesiones Antigravity**: Nueva pestaña **Chats** con acceso y lectura de las 113 conversaciones registradas en la PC, transcripciones detalladas de mensajes, razonamiento y código.
-            - **📁 Navegador de Proyectos Locales en PC**: Nueva pestaña **Proyectos** con escaneo en vivo de 46 repositorios en Windows (`Documents/GitHub`, `ZCodeProject`, `antigravity`), ramas git, commits y cambio de proyecto activo al instante.
+            ### 🚀 Novedades de la Versión v2.4.0
+            - **🌍 Conexión Multi-Red Global (Perú ↔ Japón / 5G / Cualquier Red)**: Túnel Anycast de Cloudflare integrado de forma nativa en la PC. Permite enlazar el celular en cualquier país o red celular con la computadora de escritorio sin abrir puertos en el router ni configurar IP pública fija.
+            - **🔍 Auto-Descubrimiento en la Nube (GitHub Gist Relay)**: Sincronización automática del endpoint del túnel con GitHub. El celular detecta el host de la PC con 1 solo toque en "Descubrir PC en la Nube", o de forma automática cuando sale de la red local.
+            - **🔄 Conmutador Local / Global Instantáneo**: Selector en la pestaña Ajustes para alternar entre Wi-Fi local de alta velocidad y modo Global encriptado por TLS (HTTPS / WSS).
+            - **📜 Historial Completo de Sesiones Antigravity**: Acceso y lectura de las 113 conversaciones registradas en la PC, transcripciones detalladas de mensajes, razonamiento y código.
+            - **📁 Navegador de Proyectos Locales en PC**: Escaneo en vivo de 46 repositorios en Windows (`Documents/GitHub`, `ZCodeProject`, `antigravity`), ramas git, commits y cambio de proyecto activo al instante con caché optimizada en RAM.
             - **🧠 Google Gemini 3.8 Flash High**: Motor `gemini-3.8-flash` con **Thinking Budget = 2048 (High)** integrado como motor exclusivo.
-            - **🐙 GitHub Cloud Explorer (Zero-Download)**: Lectura e inspección en RAM sin descargar repositorios.
-            - **💻 Terminal Remota PowerShell**: Control de línea de comandos en Windows en tiempo real desde el móvil.
+            - **💻 Terminal Remota PowerShell**: Control de línea de comandos en Windows en tiempo real desde cualquier parte del mundo.

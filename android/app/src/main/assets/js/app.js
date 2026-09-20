@@ -646,7 +646,21 @@ function handleBridgeEvents(data) {
 
 function initSettingsInputs() {
   const hostInput = document.getElementById('input-bridge-host');
-  if (hostInput) hostInput.value = BridgeClient.getHost();
+  const currentHost = BridgeClient.getHost();
+  if (hostInput) hostInput.value = currentHost;
+
+  const btnLocal = document.getElementById('btn-mode-local');
+  const btnGlobal = document.getElementById('btn-mode-global');
+  const isRemote = BridgeClient.isRemoteHost(currentHost);
+
+  if (btnLocal) {
+    btnLocal.style.background = isRemote ? 'var(--bg-surface-elevated)' : 'var(--accent-indigo)';
+    btnLocal.style.fontWeight = isRemote ? 'normal' : '700';
+  }
+  if (btnGlobal) {
+    btnGlobal.style.background = isRemote ? 'var(--accent-indigo)' : 'var(--bg-surface-elevated)';
+    btnGlobal.style.fontWeight = isRemote ? '700' : 'normal';
+  }
 
   const modelSelect = document.getElementById('setting-gemini-model');
   if (modelSelect) {
@@ -655,6 +669,70 @@ function initSettingsInputs() {
 
   if (typeof AuthManager !== 'undefined') {
     AuthManager.updateUI();
+  }
+}
+
+function setConnectionMode(mode) {
+  const btnLocal = document.getElementById('btn-mode-local');
+  const btnGlobal = document.getElementById('btn-mode-global');
+  const hostInput = document.getElementById('input-bridge-host');
+
+  if (mode === 'local') {
+    if (btnLocal) {
+      btnLocal.style.background = 'var(--accent-indigo)';
+      btnLocal.style.fontWeight = '700';
+    }
+    if (btnGlobal) {
+      btnGlobal.style.background = 'var(--bg-surface-elevated)';
+      btnGlobal.style.fontWeight = 'normal';
+    }
+    const localHost = '192.168.18.113:8765';
+    BridgeClient.setHost(localHost);
+    if (hostInput) hostInput.value = localHost;
+    BridgeClient.connect();
+  } else {
+    if (btnLocal) {
+      btnLocal.style.background = 'var(--bg-surface-elevated)';
+      btnLocal.style.fontWeight = 'normal';
+    }
+    if (btnGlobal) {
+      btnGlobal.style.background = 'var(--accent-indigo)';
+      btnGlobal.style.fontWeight = '700';
+    }
+    const current = BridgeClient.getHost();
+    if (BridgeClient.isRemoteHost(current)) {
+      if (hostInput) hostInput.value = current;
+      BridgeClient.connect();
+    } else {
+      triggerRemoteDiscovery();
+    }
+  }
+}
+
+async function triggerRemoteDiscovery() {
+  const banner = document.getElementById('conn-test-feedback');
+  if (banner) {
+    banner.style.display = 'block';
+    banner.style.background = 'var(--bg-surface-elevated)';
+    banner.style.color = 'var(--accent-blue)';
+    banner.innerHTML = '🔍 Buscando túnel Cloudflare de la PC en GitHub Gist...';
+  }
+
+  const res = await BridgeClient.autoDiscoverRemoteHost();
+  const hostInput = document.getElementById('input-bridge-host');
+
+  if (res && res.success) {
+    if (hostInput) hostInput.value = res.host;
+    if (banner) {
+      banner.style.color = 'var(--success)';
+      banner.innerHTML = `✅ <b>Túnel Global detectado:</b> ${res.host}<br><span style="font-size:0.75rem;">Conexión mundial activa (Japón / 5G / Perú).</span>`;
+    }
+    initSettingsInputs();
+  } else {
+    if (banner) {
+      banner.style.color = 'var(--danger)';
+      banner.innerHTML = `❌ No se pudo auto-detectar el túnel remoto. Ingresa la URL de trycloudflare.com manualmente.`;
+    }
   }
 }
 
@@ -749,20 +827,23 @@ async function testHostConnection() {
   banner.style.color = 'var(--accent-blue)';
   banner.innerText = '⏳ Probando conexión con PC...';
 
-  const host = document.getElementById('input-bridge-host').value.trim() || BridgeClient.getHost();
+  const rawHost = document.getElementById('input-bridge-host').value.trim() || BridgeClient.getHost();
+  const host = BridgeClient.setHost(rawHost);
   const token = BridgeClient.token || 'antigravity-secret-key';
+  const url = BridgeClient.apiUrl('/api/status');
 
   try {
     const start = Date.now();
-    const res = await fetch(`http://${host}/api/status?token=${encodeURIComponent(token)}`);
+    const res = await fetch(url, { cache: 'no-store' });
     const latency = Date.now() - start;
     if (res.ok) {
       const data = await res.json();
+      const isRemote = BridgeClient.isRemoteHost(host);
       banner.style.color = 'var(--success)';
-      banner.innerHTML = `✅ <b>Enlace exitoso con PC:</b> ${data.hostname || host} (${latency}ms)`;
-      localStorage.setItem('bridge_host', host);
+      banner.innerHTML = `✅ <b>Enlace exitoso (${isRemote ? '🌐 Global / Japón' : '🏠 Local Wi-Fi'}):</b> ${data.hostname || host} (${latency}ms)`;
       BridgeClient.connect();
       AuthManager.checkSession();
+      initSettingsInputs();
     } else {
       banner.style.color = 'var(--danger)';
       banner.innerHTML = `❌ Error de autenticación HTTP ${res.status}.`;

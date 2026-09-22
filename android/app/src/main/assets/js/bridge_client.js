@@ -271,5 +271,51 @@ const BridgeClient = {
       prompt: prompt,
       options: options
     }));
+  },
+
+  async fetchOrchestraHealth() {
+    try {
+      const res = await fetch(this.apiUrl('/api/orchestra/health'));
+      return await res.json();
+    } catch (e) {
+      console.warn('[BridgeClient] Error fetching orchestra health:', e);
+      return null;
+    }
+  },
+
+  async fetchTokenStats() {
+    try {
+      const res = await fetch(this.apiUrl('/api/orchestra/tokens'));
+      return await res.json();
+    } catch (e) {
+      console.warn('[BridgeClient] Error fetching token stats:', e);
+      return null;
+    }
+  },
+
+  sendSoloPrompt(provider, prompt, projectPath = '', options = {}) {
+    if (!this.isConnected()) {
+      alert('Sin conexión activa con la PC. Verifica el modo de conexión en Ajustes.');
+      return;
+    }
+    this.ws.send(JSON.stringify({
+      type: 'solo_chat',
+      provider: provider,
+      prompt: prompt,
+      project_path: projectPath,
+      options: options
+    }));
+  },
+
+  sendOrchestraMission(objective, projectPath = '') {
+    if (!this.isConnected()) {
+      alert('Sin conexión activa con la PC. Verifica el modo de conexión en Ajustes.');
+      return;
+    }
+    this.ws.send(JSON.stringify({
+      type: 'orchestra_run',
+      objective: objective,
+      project_path: projectPath
+    }));
   }
 };

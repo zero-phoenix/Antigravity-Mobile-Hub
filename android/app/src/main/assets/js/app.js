@@ -21,11 +21,14 @@ document.addEventListener('DOMContentLoaded', () => {
     navigator.serviceWorker.register('service-worker.js').catch(() => {});
   }
 
-  // 5. Cargar Repositorios Iniciales si es necesario
-  loadReposList();
+  // 5. Cargar Proyectos para el selector de Orquesta
+  loadProjectsList();
 
   // 6. Poblar Ajustes de Interfaz
   initSettingsInputs();
+
+  // 7. Cargar métricas iniciales de Tokens y Salud de Directores
+  setTimeout(refreshOrchestraHealth, 1200);
 });
 
 // ==============================================================================
@@ -142,8 +145,34 @@ function updateGroundingUI() {
 }
 
 // ==============================================================================
-// Módulo 1: Gemini Chat
+// Módulo 1: Modo Solo (Gemini, Claude, Codex, ZCode) & Orquesta MAGI
 // ==============================================================================
+
+let currentSoloProvider = 'gemini';
+let currentOrchestraProject = '';
+
+function switchSoloProvider(provider) {
+  currentSoloProvider = provider;
+  document.querySelectorAll('.solo-chip').forEach(chip => {
+    chip.classList.toggle('active', chip.id === `chip-solo-${provider}`);
+  });
+
+  const subbar = document.getElementById('gemini-subbar');
+  if (subbar) {
+    subbar.style.display = provider === 'gemini' ? 'flex' : 'none';
+  }
+
+  const names = {
+    gemini: '⚡ Google Gemini 3.8 Flash High',
+    claude: '🧠 Claude Code CLI',
+    codex: '🤖 ChatGPT / Codex CLI',
+    zcode: '🏛️ ZCode Desktop / ResAdmi'
+  };
+  const input = document.getElementById('gemini-prompt-input');
+  if (input) {
+    input.placeholder = `Chatea directamente con ${names[provider] || provider}...`;
+  }
+}
 
 function handleSendPrompt() {
   const input = document.getElementById('gemini-prompt-input');
@@ -153,7 +182,49 @@ function handleSendPrompt() {
   appendMessage('user', prompt);
   input.value = '';
 
-  GeminiEngine.sendMessage(prompt, handleBridgeEvents);
+  if (currentSoloProvider === 'gemini') {
+    GeminiEngine.sendMessage(prompt, handleBridgeEvents);
+  } else {
+    appendMessage(currentSoloProvider, `<i>Conectando con ${currentSoloProvider}...</i>`, 'solo-thinking-bubble');
+    BridgeClient.sendSoloPrompt(currentSoloProvider, prompt, currentOrchestraProject);
+  }
+}
+
+function updateOrchestraSelectedProject(val) {
+  currentOrchestraProject = val;
+}
+
+function activateDialecticNode(step) {
+  document.querySelectorAll('.dialectic-node').forEach(node => node.classList.remove('active'));
+  const node = document.getElementById(`node-${step}`);
+  if (node) node.classList.add('active');
+}
+
+function handleSendOrchestraMission() {
+  const input = document.getElementById('orchestra-mission-input');
+  const objective = input.value.trim();
+  if (!objective) return;
+  input.value = '';
+
+  const scroll = document.getElementById('orchestra-scroll');
+  const card = document.createElement('div');
+  card.className = 'orchestra-card';
+  card.style.borderLeft = '4px solid var(--accent-cyan)';
+  card.innerHTML = `
+    <div class="orchestra-card-header">
+      <span style="color:var(--accent-cyan);">🚀 Misión Encargada</span>
+      <span style="font-size:0.7rem; color:var(--text-muted);">${new Date().toLocaleTimeString()}</span>
+    </div>
+    <div style="font-weight:600;">${escapeHTML(objective)}</div>
+  `;
+  scroll.appendChild(card);
+  scroll.scrollTop = scroll.scrollHeight;
+
+  const statusTag = document.getElementById('orchestra-status-tag');
+  if (statusTag) statusTag.innerText = '⚡ Desglosando con Naoko...';
+  activateDialecticNode('naoko');
+
+  BridgeClient.sendOrchestraMission(objective, currentOrchestraProject);
 }
 
 function quickPrompt(text) {
@@ -637,7 +708,163 @@ function handleBridgeEvents(data) {
       currentStreamingBubble = null;
     }
     appendMessage('gemini', `<span style="color:var(--danger)">[Error] ${data.message}</span>`);
+  } else if (data.event === 'solo_start') {
+    const bubble = document.getElementById('solo-thinking-bubble');
+    if (bubble) bubble.remove();
+    appendChatChunk(`[${data.provider}]: `);
+  } else if (data.event === 'chunk') {
+    const bubble = document.getElementById('solo-thinking-bubble') || document.getElementById('thinking-bubble');
+    if (bubble) bubble.remove();
+    appendChatChunk(data.text);
+  } else if (data.event === 'solo_end') {
+    finalizeChatChunk(data.response);
+    refreshOrchestraHealth();
+  } else if (data.event === 'orchestra_start') {
+    const statusTag = document.getElementById('orchestra-status-tag');
+    if (statusTag) statusTag.innerText = '⚡ En marcha';
+  } else if (data.event === 'orchestra_step') {
+    activateDialecticNode(data.step);
+    const statusTag = document.getElementById('orchestra-status-tag');
+    if (statusTag) statusTag.innerText = `⚡ ${data.title}`;
+  } else if (data.event === 'orchestra_plan') {
+    activateDialecticNode('naoko');
+    appendOrchestraCard('plan', '📋 Plan de Reparto (Naoko)', data.plan);
+  } else if (data.event === 'orchestra_tesis') {
+    activateDialecticNode('melchior');
+    appendOrchestraCard('tesis', '🔵 Tesis Técnica (Melchior)', data.content);
+  } else if (data.event === 'orchestra_antitesis') {
+    activateDialecticNode('balthasar');
+    const content = `<b>Dictamen:</b> ${escapeHTML(data.verdict)}<br><b>Evidencia empírica en PC:</b><div class="evidence-box">${escapeHTML(data.evidence)}</div>`;
+    appendOrchestraCardRaw('antitesis', '🔴 Antítesis Popperiana (Balthasar)', content);
+  } else if (data.event === 'orchestra_sintesis') {
+    activateDialecticNode('casper');
+    appendOrchestraCard('sintesis', '🟡 Síntesis Consolidada (Casper)', data.content);
+  } else if (data.event === 'orchestra_audit') {
+    activateDialecticNode('ritsuko');
+    const r = data.report || {};
+    const content = `
+      <b>Estado:</b> <span style="color:var(--success)">${escapeHTML(r.status || 'COMPLETO')}</span><br>
+      <b>Duración:</b> ${r.duration_seconds || 0}s<br>
+      <b>Directores sanos:</b> ${(r.directors_active || []).join(', ')}<br>
+      <b>Ahorro de tokens:</b> ${r.token_stats ? r.token_stats.savings_ratio + '%' : '--'}
+    `;
+    appendOrchestraCardRaw('audit', '🟣 Auditoría de Cierre (Ritsuko)', content);
+    refreshOrchestraHealth();
+  } else if (data.event === 'orchestra_complete') {
+    const statusTag = document.getElementById('orchestra-status-tag');
+    if (statusTag) statusTag.innerText = '✅ Misión Concluida';
+    setTimeout(() => {
+      document.querySelectorAll('.dialectic-node').forEach(node => node.classList.remove('active'));
+    }, 4000);
+  } else if (data.event === 'orchestra_health_update') {
+    renderDirectorsHealth(data.health);
+    renderTokenStats(data.tokens);
   }
+}
+
+function appendOrchestraCard(type, title, text) {
+  const scroll = document.getElementById('orchestra-scroll');
+  if (!scroll) return;
+  const card = document.createElement('div');
+  card.className = `orchestra-card ${type}`;
+  card.innerHTML = `
+    <div class="orchestra-card-header">
+      <span>${escapeHTML(title)}</span>
+      <span style="font-size:0.7rem; color:var(--text-muted);">${new Date().toLocaleTimeString()}</span>
+    </div>
+    <div>${escapeHTML(text).replace(/\n/g, '<br>')}</div>
+  `;
+  scroll.appendChild(card);
+  scroll.scrollTop = scroll.scrollHeight;
+}
+
+function appendOrchestraCardRaw(type, title, rawHtml) {
+  const scroll = document.getElementById('orchestra-scroll');
+  if (!scroll) return;
+  const card = document.createElement('div');
+  card.className = `orchestra-card ${type}`;
+  card.innerHTML = `
+    <div class="orchestra-card-header">
+      <span>${escapeHTML(title)}</span>
+      <span style="font-size:0.7rem; color:var(--text-muted);">${new Date().toLocaleTimeString()}</span>
+    </div>
+    <div>${rawHtml}</div>
+  `;
+  scroll.appendChild(card);
+  scroll.scrollTop = scroll.scrollHeight;
+}
+
+function openTokenModal() {
+  const modal = document.getElementById('token-modal');
+  if (modal) modal.style.display = 'flex';
+  refreshOrchestraHealth();
+}
+
+function closeTokenModal() {
+  const modal = document.getElementById('token-modal');
+  if (modal) modal.style.display = 'none';
+}
+
+async function refreshOrchestraHealth() {
+  try {
+    const health = await BridgeClient.fetchOrchestraHealth();
+    if (health) renderDirectorsHealth(health);
+
+    const tokens = await BridgeClient.fetchTokenStats();
+    if (tokens) renderTokenStats(tokens);
+  } catch (e) {
+    console.warn('Error refreshing orchestra health:', e);
+  }
+}
+
+function renderTokenStats(tokens) {
+  if (!tokens) return;
+  const totalUsed = tokens.total_tokens_used || 0;
+  const totalSaved = tokens.total_tokens_saved || 0;
+  const ratio = tokens.savings_ratio || 0;
+
+  const badge = document.getElementById('pill-token-stats');
+  if (badge) {
+    badge.innerText = `📊 ${totalUsed.toLocaleString()} tok (${ratio}%)`;
+  }
+
+  const elUsed = document.getElementById('tok-total-used');
+  if (elUsed) elUsed.innerText = `${totalUsed.toLocaleString()} tokens`;
+
+  const elSaved = document.getElementById('tok-total-saved');
+  if (elSaved) elSaved.innerText = `${totalSaved.toLocaleString()} tokens (${ratio}% Ahorro 10x)`;
+
+  const elGemini = document.getElementById('tok-gemini-stat');
+  if (elGemini && tokens.gemini) elGemini.innerText = `${tokens.gemini.input + tokens.gemini.output}`;
+
+  const elClaude = document.getElementById('tok-claude-stat');
+  if (elClaude) elClaude.innerText = `${tokens.claude_estimated || 0}`;
+
+  const elCodex = document.getElementById('tok-codex-stat');
+  if (elCodex) elCodex.innerText = `${tokens.codex_estimated || 0}`;
+}
+
+function renderDirectorsHealth(health) {
+  const container = document.getElementById('directors-health-list');
+  if (!container || !health) return;
+
+  let html = '';
+  Object.values(health).forEach(d => {
+    const isOk = d.available && !d.breaker_open;
+    const statusColor = isOk ? 'var(--success)' : 'var(--danger)';
+    const statusText = isOk ? '🟢 En línea' : (d.breaker_open ? '⚠️ Enfriamiento' : '🔴 No disponible');
+
+    html += `
+      <div style="background:#111; padding:8px 10px; border-radius:6px; border:1px solid var(--border-subtle); display:flex; justify-content:space-between; align-items:center;">
+        <div>
+          <div style="font-size:0.8rem; font-weight:700; color:#fff;">${escapeHTML(d.displayName)}</div>
+          <div style="font-size:0.68rem; color:var(--text-muted);">${escapeHTML(d.role)} • ${escapeHTML(d.version || '')}</div>
+        </div>
+        <span style="font-size:0.75rem; font-weight:700; color:${statusColor};">${statusText}</span>
+      </div>
+    `;
+  });
+  container.innerHTML = html;
 }
 
 // ==============================================================================
@@ -1192,6 +1419,18 @@ async function loadProjectsList() {
       return;
     }
 
+    const sel = document.getElementById('orchestra-project-select');
+    if (sel) {
+      sel.innerHTML = '<option value="">(Espacio Actual: Antigravity-Mobile-Hub)</option>';
+      cachedProjects.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p.path;
+        opt.textContent = `${p.name} (${p.branch || 'dir'})`;
+        sel.appendChild(opt);
+      });
+      if (currentOrchestraProject) sel.value = currentOrchestraProject;
+    }
+
     let html = '';
     cachedProjects.forEach(proj => {
       const name = escapeHTML(proj.name || 'Proyecto');
@@ -1213,13 +1452,18 @@ async function loadProjectsList() {
           <div style="font-size:0.72rem; color:var(--accent-cyan); font-family:var(--font-mono); word-break:break-all; margin:3px 0 6px 0;">
             ${path}
           </div>
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-top:6px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-top:6px; flex-wrap:wrap; gap:6px;">
             <div style="font-size:0.72rem; color:var(--text-muted);">
               ${isGit ? `🌿 Rama: <b>${branch}</b> • #${commit}` : 'Directorio local'}
             </div>
-            <button class="btn-action-small" style="background:var(--accent-indigo); font-weight:600;" onclick="switchProject('${path.replace(/\\/g, '\\\\')}')">
-              👉 Activar en PC
-            </button>
+            <div style="display:flex; gap:4px;">
+              <button class="btn-action-small" style="background:var(--accent-blue); font-weight:600;" onclick="launchInOrchestra('${path.replace(/\\/g, '\\\\')}', '${name}')">
+                🚀 Orquesta
+              </button>
+              <button class="btn-action-small" style="background:var(--accent-indigo); font-weight:600;" onclick="switchProject('${path.replace(/\\/g, '\\\\')}')">
+                👉 Activar PC
+              </button>
+            </div>
           </div>
         </div>
       `;
@@ -1249,5 +1493,17 @@ async function switchProject(targetPath) {
     loadProjectsList();
   } catch (err) {
     alert(`❌ No se pudo cambiar de proyecto: ${err.message}`);
+  }
+}
+
+function launchInOrchestra(path, name) {
+  currentOrchestraProject = path;
+  const sel = document.getElementById('orchestra-project-select');
+  if (sel) sel.value = path;
+  switchTab('view-orchestra', document.getElementById('tab-btn-orchestra'));
+  const input = document.getElementById('orchestra-mission-input');
+  if (input) {
+    input.focus();
+    input.placeholder = `Encarga una misión para ${name}...`;
   }
 }

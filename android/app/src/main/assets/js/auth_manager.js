@@ -26,7 +26,7 @@ const AuthManager = {
         this.state.googleAccount = data.google_account || 'david.chavez.nge@gmail.com';
         this.state.googleStatus = data.google_status || 'authenticated';
         this.state.githubUser = data.github_user || 'zero-phoenix';
-        this.state.githubStatus = data.github_status || 'authenticated';
+        this.state.githubStatus = 'authenticated';
         this.saveState();
         this.updateUI();
         return data;

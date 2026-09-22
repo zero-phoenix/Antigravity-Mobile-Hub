@@ -62,9 +62,9 @@ jobs:
           draft: false
           prerelease: false
           body: |
-            ## ⚡ Antigravity Mobile Hub ${{ steps.prepare_apk.outputs.tag }} — Global Remote Multi-Connection Edition
+            ## ⚡ Antigravity Mobile Hub ${{ steps.prepare_apk.outputs.tag }} — MAGI-Orchestra System Edition
 
-            Aplicación Android de ingeniería agéntica conectada simultáneamente a **GitHub** (`zero-phoenix`), **Google Gemini 3.8 Flash High** y **Google Antigravity en la PC anfitriona** desde cualquier lugar del mundo (ej. PC en Perú y celular en Japón o con datos móviles 5G).
+            Sistema de ingeniería móvil y de escritorio con la filosofía dialéctica de **[zero-phoenix/Magisys](https://github.com/zero-phoenix/Magisys)**, orquestado centralmente por **Google Gemini 3.8 Flash High** dirigiendo a **Claude Code CLI**, **ChatGPT / Codex CLI** y **ZCode** para ejecutar la máxima cantidad de proyectos en la PC anfitriona con máxima eficiencia de tokens (10x Token Yield).
 
             ### 📲 Descarga e Instalación
             - **Descarga el archivo adjunto**: [`${{ steps.prepare_apk.outputs.apk_path }}`](https://github.com/${{ github.repository }}/releases/download/${{ steps.prepare_apk.outputs.tag }}/${{ steps.prepare_apk.outputs.apk_path }})
@@ -72,11 +72,21 @@ jobs:
 
             ---
 
-            ### 🚀 Novedades de la Versión v2.4.0
-            - **🌍 Conexión Multi-Red Global (Perú ↔ Japón / 5G / Cualquier Red)**: Túnel Anycast de Cloudflare integrado de forma nativa en la PC. Permite enlazar el celular en cualquier país o red celular con la computadora de escritorio sin abrir puertos en el router ni configurar IP pública fija.
-            - **🔍 Auto-Descubrimiento en la Nube (GitHub Gist Relay)**: Sincronización automática del endpoint del túnel con GitHub. El celular detecta el host de la PC con 1 solo toque en "Descubrir PC en la Nube", o de forma automática cuando sale de la red local.
-            - **🔄 Conmutador Local / Global Instantáneo**: Selector en la pestaña Ajustes para alternar entre Wi-Fi local de alta velocidad y modo Global encriptado por TLS (HTTPS / WSS).
-            - **📜 Historial Completo de Sesiones Antigravity**: Acceso y lectura de las 113 conversaciones registradas en la PC, transcripciones detalladas de mensajes, razonamiento y código.
-            - **📁 Navegador de Proyectos Locales en PC**: Escaneo en vivo de 46 repositorios en Windows (`Documents/GitHub`, `ZCodeProject`, `antigravity`), ramas git, commits y cambio de proyecto activo al instante con caché optimizada en RAM.
-            - **🧠 Google Gemini 3.8 Flash High**: Motor `gemini-3.8-flash` con **Thinking Budget = 2048 (High)** integrado como motor exclusivo.
-            - **💻 Terminal Remota PowerShell**: Control de línea de comandos en Windows en tiempo real desde cualquier parte del mundo.
+            ### 🚀 Novedades de la Versión v3.0.0
+            - **🏛️ Cockpit Dialéctico MAGI (Modo Orquesta)**:
+              - **Naoko Dispatcher (Gemini 3.8 Flash High)**: Desglose de metas y asignación automática del DAG de tareas según fortalezas y costes de cada modelo.
+              - **Melchior (Tesis)**: Construcción técnica y generación de código mediante ChatGPT/Codex o Claude Code.
+              - **Balthasar (Antítesis Popperiana)**: Pruebas empíricas reales en Windows (*"una afirmación sin evidencia verificada no es una afirmación"*).
+              - **Casper (Síntesis)**: Consolidación del parche definitivo y confirmación en Git.
+              - **Ritsuko (Auditoría Sentinel)**: Supervisión de salud de directores, cortacircuitos y auditoría de tokens.
+            - **👤 Modo Individual (Laboratorio Solo)**:
+              - Switcher táctil en barra superior para chatear 1 a 1 de forma directa con: `[⚡ Gemini 3.8 Flash]`, `[🧠 Claude Code CLI]`, `[🤖 Codex/ChatGPT]` y `[🏛️ ZCode Desktop]`.
+            - **📊 Optimización Extrema de Tokens (10x Token Yield)**:
+              - Context Caching nativo de Google Gemini para especificaciones estáticas.
+              - Compresión semántica de salidas de consola: reduce salidas masivas de 5,000 líneas a ~30 líneas de errores clave (ahorro del 95%).
+              - Payloads Delta A2A estructurados en JSON entre agentes.
+              - Indicador flotante en cabecera con contador de tokens y porcentaje de ahorro en vivo.
+            - **📂 Matriz de Proyectos & Lanzamiento en 1 Toque**:
+              - Selector de 46 repositorios de la PC conectado directamente a la orquesta con botón *🚀 Lanzar en Orquesta*.
+            - **🌍 Enlace Global Anycast & Wi-Fi Local**:
+              - Túnel Cloudflare Anycast TLS y auto-descubrimiento en GitHub Gist para conectar desde Perú a Japón o cualquier red móvil sin abrir puertos.

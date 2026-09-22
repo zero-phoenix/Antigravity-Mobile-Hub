@@ -759,3 +759,171 @@ nav.app-navbar {
   margin: 10px 0;
 }
 
+/* ==============================================================================
+   MAGI-Orchestra System v3.0 Styles
+   ============================================================================== */
+
+.token-sentinel-chip {
+  background: linear-gradient(135deg, rgba(99,102,241,0.15), rgba(6,182,212,0.15));
+  border: 1px solid rgba(99,102,241,0.4);
+  color: var(--accent-cyan);
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.2s ease;
+}
+.token-sentinel-chip:hover {
+  border-color: var(--accent-cyan);
+  transform: scale(1.02);
+}
+
+.dialectic-cockpit {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dialectic-nodes-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 4px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.dialectic-node {
+  flex: 1;
+  min-width: 80px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: 6px 8px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  transition: all 0.25s ease;
+}
+
+.dialectic-node.active {
+  box-shadow: 0 0 10px rgba(99,102,241,0.5);
+  animation: pulse-glow 1.5s infinite;
+}
+
+@keyframes pulse-glow {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.03); }
+  100% { transform: scale(1); }
+}
+
+.dialectic-node.melchior { border-color: rgba(59,130,246,0.5); }
+.dialectic-node.melchior.active { border-color: #3b82f6; background: rgba(59,130,246,0.15); }
+
+.dialectic-node.balthasar { border-color: rgba(239,68,68,0.5); }
+.dialectic-node.balthasar.active { border-color: #ef4444; background: rgba(239,68,68,0.15); }
+
+.dialectic-node.casper { border-color: rgba(234,179,8,0.5); }
+.dialectic-node.casper.active { border-color: #eab308; background: rgba(234,179,8,0.15); }
+
+.dialectic-node.ritsuko { border-color: rgba(168,85,247,0.5); }
+.dialectic-node.ritsuko.active { border-color: #a855f7; background: rgba(168,85,247,0.15); }
+
+.node-title { font-size: 0.72rem; font-weight: 700; color: #fff; }
+.node-sub { font-size: 0.62rem; color: var(--text-muted); }
+
+.dialectic-arrow {
+  color: var(--text-dim);
+  font-size: 0.8rem;
+  user-select: none;
+}
+
+.solo-chips-bar {
+  display: flex;
+  gap: 6px;
+  padding: 6px 12px;
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border-subtle);
+  overflow-x: auto;
+  flex-shrink: 0;
+}
+
+.solo-chip {
+  background: var(--bg-surface-elevated);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 5px 10px;
+  border-radius: 20px;
+  white-space: nowrap;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.2s;
+}
+
+.solo-chip.active {
+  background: var(--accent-indigo);
+  border-color: var(--accent-indigo);
+  color: #fff;
+  font-weight: 700;
+  box-shadow: 0 0 8px rgba(99,102,241,0.4);
+}
+
+.orchestra-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  padding: 12px;
+  margin-bottom: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+
+.orchestra-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.8rem;
+  font-weight: 700;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  padding-bottom: 5px;
+  margin-bottom: 4px;
+}
+
+.orchestra-card.plan { border-left: 4px solid var(--accent-cyan); }
+.orchestra-card.tesis { border-left: 4px solid #3b82f6; }
+.orchestra-card.antitesis { border-left: 4px solid #ef4444; }
+.orchestra-card.sintesis { border-left: 4px solid #eab308; }
+.orchestra-card.audit { border-left: 4px solid #a855f7; }
+
+.evidence-box {
+  background: #000;
+  border: 1px solid #222;
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: #a7f3d0;
+  max-height: 160px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  margin-top: 4px;
+}
+

@@ -17,9 +17,12 @@
     <div class="brand-wrapper">
       <span class="brand-icon">⚡</span>
       <span class="brand-title">Antigravity</span>
-      <span class="badge-tag">Hub Supremo v2.4 (Global)</span>
+      <span class="badge-tag">MAGI-Orchestra v3.0</span>
     </div>
-    <div class="header-actions">
+    <div class="header-actions" style="display:flex; gap:6px; align-items:center;">
+      <div class="token-sentinel-chip" id="pill-token-stats" onclick="openTokenModal()" title="Ver telemetría de tokens y salud de directores">
+        📊 0 tok (0%)
+      </div>
       <div class="host-badge" id="host-badge" onclick="switchTab('view-settings', document.getElementById('tab-btn-settings'))" title="Toca para configurar conexión">
         <span class="dot" id="host-status-dot"></span>
         <span id="host-status-label">Desconectado</span>
@@ -35,18 +38,84 @@
     <button class="btn-telemetry-refresh" style="background:transparent; border:none; color:var(--text-muted); cursor:pointer;" onclick="fetchTelemetry()" title="Actualizar">🔄</button>
   </div>
 
-  <!-- Quick Model & Grounding Bar (Visible en Gemini) -->
-  <div class="gemini-quick-bar" id="gemini-subbar">
-    <div class="model-pill" id="pill-model-name" onclick="cycleModel()">⚡ Gemini 3.8 Flash High</div>
-    <div class="thinking-pill" id="pill-thinking-mode" onclick="cycleThinkingMode()">⚡ High (2048)</div>
-    <div class="grounding-toggle active" id="grounding-badge" onclick="toggleGrounding()">🛡️ Grounding: Estricto</div>
-  </div>
-
   <!-- Contenedor Principal de Vistas -->
   <main class="views-container">
     
-    <!-- VISTA 1: Gemini Intelligence Workspace -->
-    <section id="view-gemini" class="view-pane active">
+    <!-- VISTA 1: MAGI-Orchestra Cockpit (Enjambre Dialéctico) -->
+    <section id="view-orchestra" class="view-pane active">
+      <!-- Cockpit Dialéctico -->
+      <div class="dialectic-cockpit">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <span style="font-size:0.75rem; font-weight:700; color:var(--accent-cyan);">🏛️ ENJAMBRE MAGI · DIRECTOR: GEMINI 3.8 FLASH</span>
+          <span id="orchestra-status-tag" style="font-size:0.68rem; color:var(--text-muted);">Listo</span>
+        </div>
+        
+        <div class="dialectic-nodes-row">
+          <div class="dialectic-node melchior" id="node-melchior">
+            <span class="node-title">🔵 Melchior</span>
+            <span class="node-sub">Tesis (Codex/Claude)</span>
+          </div>
+          <span class="dialectic-arrow">➔</span>
+          <div class="dialectic-node balthasar" id="node-balthasar">
+            <span class="node-title">🔴 Balthasar</span>
+            <span class="node-sub">Antítesis (Tests PC)</span>
+          </div>
+          <span class="dialectic-arrow">➔</span>
+          <div class="dialectic-node casper" id="node-casper">
+            <span class="node-title">🟡 Casper</span>
+            <span class="node-sub">Síntesis (Gemini)</span>
+          </div>
+          <span class="dialectic-arrow">·</span>
+          <div class="dialectic-node ritsuko" id="node-ritsuko" onclick="openTokenModal()" style="cursor:pointer;" title="Ver auditoría">
+            <span class="node-title">🟣 Ritsuko</span>
+            <span class="node-sub">Auditoría / Tokens</span>
+          </div>
+        </div>
+
+        <!-- Selector de Proyecto para la Orquesta -->
+        <div style="display:flex; gap:6px; align-items:center; margin-top:2px;">
+          <label style="font-size:0.72rem; color:var(--text-muted); white-space:nowrap;">🎯 Proyecto:</label>
+          <select id="orchestra-project-select" class="composer-input" style="flex:1; padding:4px 8px; font-size:0.78rem; border-radius:6px;" onchange="updateOrchestraSelectedProject(this.value)">
+            <option value="">(Espacio de Trabajo Actual: Antigravity-Mobile-Hub)</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Flujo de Eventos de la Orquesta -->
+      <div class="chat-scroll-area" id="orchestra-scroll">
+        <div class="orchestra-card plan">
+          <div class="orchestra-card-header">
+            <span style="color:var(--accent-cyan);">⚖️ MAGI-Orchestra System v3.0</span>
+            <span style="font-size:0.7rem; color:var(--text-muted);">Filosofía Magisys</span>
+          </div>
+          Escribe una meta de ingeniería para cualquier proyecto. <b>Google Gemini 3.8 Flash High</b> orquestará la misión: delegará la <b>Tesis</b> técnica a Codex o Claude, ejecutará la <b>Antítesis</b> con pruebas empíricas en tu PC Windows (<i>"una afirmación sin evidencia verificada no es válida"</i>), y <b>Casper</b> consolidará la solución final.
+        </div>
+      </div>
+
+      <!-- Composer de Misión -->
+      <div class="chat-composer">
+        <input type="text" id="orchestra-mission-input" class="composer-input" placeholder="Encarga una misión al enjambre MAGI..." onkeydown="if(event.key==='Enter') handleSendOrchestraMission()">
+        <button class="btn-icon-send" onclick="handleSendOrchestraMission()">🚀</button>
+      </div>
+    </section>
+
+    <!-- VISTA 2: Modo Solo / Individual (Gemini, Claude, Codex, ZCode) -->
+    <section id="view-gemini" class="view-pane">
+      <!-- Selector de Solista 1 a 1 -->
+      <div class="solo-chips-bar">
+        <div class="solo-chip active" id="chip-solo-gemini" onclick="switchSoloProvider('gemini')">⚡ Gemini 3.8 Flash</div>
+        <div class="solo-chip" id="chip-solo-claude" onclick="switchSoloProvider('claude')">🧠 Claude Code CLI</div>
+        <div class="solo-chip" id="chip-solo-codex" onclick="switchSoloProvider('codex')">🤖 ChatGPT / Codex</div>
+        <div class="solo-chip" id="chip-solo-zcode" onclick="switchSoloProvider('zcode')">🏛️ ZCode Desktop</div>
+      </div>
+
+      <!-- Quick Model & Grounding Bar (Visible en Solo Gemini) -->
+      <div class="gemini-quick-bar" id="gemini-subbar">
+        <div class="model-pill" id="pill-model-name" onclick="cycleModel()">⚡ Gemini 3.8 Flash High</div>
+        <div class="thinking-pill" id="pill-thinking-mode" onclick="cycleThinkingMode()">⚡ High (2048)</div>
+        <div class="grounding-toggle active" id="grounding-badge" onclick="toggleGrounding()">🛡️ Grounding: Estricto</div>
+      </div>
+
       <!-- Chips de Acción Rápida (1 toque) -->
       <div class="quick-suggestions-bar">
         <button class="suggestion-chip" onclick="quickPrompt('Explícame el estado actual de este proyecto')">💡 Estado Proyecto</button>
@@ -56,9 +125,9 @@
       </div>
 
       <div class="chat-scroll-area" id="chat-scroll">
-        <div class="message-card gemini">
-          👋 <b>Bienvenido a Antigravity Mobile Supremo v2.4 (Global Edition).</b><br>
-          Conectado globalmente a tu PC en Perú desde cualquier parte del mundo (Japón, datos móviles o Wi-Fi), a la telemetría del sistema y a GitHub en la nube.
+        <div class="message-card gemini" id="solo-welcome-card">
+          👋 <b>Modo Individual (Laboratorio Solo).</b><br>
+          Chatea directamente 1 a 1 con el motor seleccionado arriba con streaming continuo y ejecución en la PC.
         </div>
       </div>
 
@@ -347,23 +416,64 @@
     </div>
   </div>
 
-  <!-- Bottom Navigation Bar (6 Pestañas) -->
+  <!-- Modal Ritsuko Sentinel: Telemetría de Tokens y Salud de Directores -->
+  <div class="modal-overlay" id="token-modal" style="display:none;" onclick="if(event.target===this) closeTokenModal()">
+    <div class="modal-card" style="max-width:440px; padding:16px;">
+      <div class="modal-header" style="margin-bottom:12px;">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span style="font-size:1.2rem;">🟣</span>
+          <div>
+            <h4 style="font-size:0.95rem; font-weight:700; color:#fff; margin:0;">Ritsuko Sentinel & Optimización de Tokens</h4>
+            <span style="font-size:0.72rem; color:var(--text-muted);">Auditoría de Cuotas, Caché y Directores</span>
+          </div>
+        </div>
+        <button class="btn-action-small" style="background:#374151; padding:4px 8px;" onclick="closeTokenModal()">✕</button>
+      </div>
+
+      <!-- Resumen de Tokens -->
+      <div style="background:#000; border-radius:10px; padding:12px; border:1px solid var(--border-subtle); margin-bottom:12px;">
+        <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+          <span style="font-size:0.8rem; color:var(--text-muted);">Tokens Consumidos:</span>
+          <span id="tok-total-used" style="font-size:0.85rem; font-weight:700; color:#fff;">0 tok</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+          <span style="font-size:0.8rem; color:var(--text-muted);">Tokens Ahorrados (10x):</span>
+          <span id="tok-total-saved" style="font-size:0.85rem; font-weight:700; color:var(--success);">0 tok (0%)</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; font-size:0.72rem; color:var(--text-dim); border-top:1px solid #222; padding-top:6px;">
+          <span>⚡ Gemini: <b id="tok-gemini-stat" style="color:#fff;">0</b></span>
+          <span>🧠 Claude: <b id="tok-claude-stat" style="color:#fff;">0</b></span>
+          <span>🤖 Codex: <b id="tok-codex-stat" style="color:#fff;">0</b></span>
+        </div>
+      </div>
+
+      <!-- Salud de los Directores -->
+      <h5 style="font-size:0.8rem; font-weight:700; color:var(--text-muted); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.5px;">Estado de Directores en Windows</h5>
+      <div id="directors-health-list" style="display:flex; flex-direction:column; gap:6px; max-height:180px; overflow-y:auto; margin-bottom:12px;">
+        <div style="text-align:center; padding:10px; color:var(--text-muted); font-size:0.8rem;">Sondeando directores...</div>
+      </div>
+
+      <button class="btn-action-small" style="width:100%; padding:9px; background:var(--accent-indigo); font-weight:700;" onclick="refreshOrchestraHealth()">🔄 Actualizar Salud y Telemetría</button>
+    </div>
+  </div>
+
+  <!-- Bottom Navigation Bar (6 Pestañas Ergonomía Pulgar) -->
   <nav class="app-navbar">
-    <button class="nav-tab-btn active" id="tab-btn-gemini" onclick="switchTab('view-gemini', this)">
-      <span class="nav-tab-icon">💬</span>
-      <span>Gemini</span>
+    <button class="nav-tab-btn active" id="tab-btn-orchestra" onclick="switchTab('view-orchestra', this)">
+      <span class="nav-tab-icon">🏛️</span>
+      <span>Orquesta</span>
     </button>
-    <button class="nav-tab-btn" id="tab-btn-conversations" onclick="switchTab('view-conversations', this); loadConversationsList();">
-      <span class="nav-tab-icon">📜</span>
-      <span>Chats</span>
+    <button class="nav-tab-btn" id="tab-btn-solo" onclick="switchTab('view-gemini', this)">
+      <span class="nav-tab-icon">👤</span>
+      <span>Solo</span>
     </button>
     <button class="nav-tab-btn" id="tab-btn-projects" onclick="switchTab('view-projects', this); loadProjectsList();">
       <span class="nav-tab-icon">📁</span>
       <span>Proyectos</span>
     </button>
-    <button class="nav-tab-btn" id="tab-btn-repos" onclick="switchTab('view-repos', this)">
-      <span class="nav-tab-icon">☁️</span>
-      <span>Repos</span>
+    <button class="nav-tab-btn" id="tab-btn-conversations" onclick="switchTab('view-conversations', this); loadConversationsList();">
+      <span class="nav-tab-icon">📜</span>
+      <span>Chats</span>
     </button>
     <button class="nav-tab-btn" id="tab-btn-terminal" onclick="switchTab('view-terminal', this)">
       <span class="nav-tab-icon">💻</span>

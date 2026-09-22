@@ -52,6 +52,7 @@ os.environ.setdefault("GEMINI_THINKING_BUDGET", "2048")
 
 import cloud_inspector
 from bridge.tunnel_manager import tunnel_manager
+from bridge.orchestra import directors_health, token_optimizer, orchestra_coordinator
 
 # Auto-iniciar túnel Cloudflare en segundo plano para acceso mundial (Japón, datos móviles, etc.)
 threading.Thread(target=lambda: tunnel_manager.start(wait_timeout=25), daemon=True).start()
@@ -386,6 +387,71 @@ async def api_tunnel_restart(request):
     tunnel_manager.start(wait_timeout=25)
     return JSONResponse(tunnel_manager.get_info())
 
+# ==============================================================================
+# MAGI-Orchestra & Modo Solo Endpoints
+# ==============================================================================
+
+async def api_orchestra_health(request):
+    """Devuelve el estado en tiempo real de todos los directores (Gemini, Claude, Codex, ZCode)."""
+    if not verify_token(request):
+        return JSONResponse({"error": "No autorizado"}, status_code=401)
+    return JSONResponse(directors_health.probe_all())
+
+async def api_orchestra_tokens(request):
+    """Devuelve la telemetría del consumo de tokens y ahorro por compresión/caching."""
+    if not verify_token(request):
+        return JSONResponse({"error": "No autorizado"}, status_code=401)
+    return JSONResponse(token_optimizer.tracker.get_stats())
+
+async def api_solo_chat(request):
+    """Ejecuta una petición individual hacia un proveedor (gemini, claude, codex, zcode)."""
+    if not verify_token(request):
+        return JSONResponse({"error": "No autorizado"}, status_code=401)
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    provider = body.get("provider", "gemini")
+    prompt = body.get("prompt", "")
+    project_path = body.get("project_path") or str(WORKSPACE_DIR)
+    options = body.get("options", {})
+
+    full_resp = ""
+    async for event in orchestra_coordinator.run_solo(provider, prompt, project_path, options):
+        if event.get("event") == "solo_end":
+            full_resp = event.get("response", "")
+        elif event.get("event") == "error":
+            return JSONResponse({"error": event.get("message")}, status_code=500)
+
+    return JSONResponse({
+        "status": "success",
+        "provider": provider,
+        "response": full_resp,
+        "token_stats": token_optimizer.tracker.get_stats()
+    })
+
+async def api_orchestra_run(request):
+    """Ejecuta el bucle dialéctico MAGI completo sobre un proyecto."""
+    if not verify_token(request):
+        return JSONResponse({"error": "No autorizado"}, status_code=401)
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    objective = body.get("objective", "")
+    project_path = body.get("project_path") or str(WORKSPACE_DIR)
+
+    events = []
+    async for ev in orchestra_coordinator.run_orchestra(project_path, objective):
+        events.append(ev)
+
+    return JSONResponse({
+        "status": "success",
+        "project": project_path,
+        "events": events,
+        "token_stats": token_optimizer.tracker.get_stats()
+    })
+
 async def api_repos(request):
     """Devuelve los repositorios de GitHub en la nube del usuario."""
     if not verify_token(request):
@@ -640,6 +706,33 @@ async def websocket_endpoint(websocket: WebSocket):
                     "data": telemetry
                 })
 
+            elif msg_type == "get_orchestra_health":
+                health = directors_health.probe_all()
+                tokens = token_optimizer.tracker.get_stats()
+                await websocket.send_json({
+                    "event": "orchestra_health_update",
+                    "health": health,
+                    "tokens": tokens
+                })
+
+            elif msg_type == "solo_chat":
+                provider = data.get("provider", "gemini")
+                prompt = data.get("prompt", "").strip()
+                project_path = data.get("project_path") or str(WORKSPACE_DIR)
+                options = data.get("options", {})
+                if not prompt:
+                    continue
+                async for ev in orchestra_coordinator.run_solo(provider, prompt, project_path, options):
+                    await websocket.send_json(ev)
+
+            elif msg_type == "orchestra_run":
+                objective = data.get("objective", "").strip()
+                project_path = data.get("project_path") or str(WORKSPACE_DIR)
+                if not objective:
+                    continue
+                async for ev in orchestra_coordinator.run_orchestra(project_path, objective):
+                    await websocket.send_json(ev)
+
             elif msg_type == "chat":
                 prompt = data.get("prompt", "").strip()
                 options = data.get("options", {})
@@ -877,6 +970,10 @@ routes = [
     Route("/api/gemini/history", api_gemini_history),
     Route("/api/tunnel/info", api_tunnel_info),
     Route("/api/tunnel/restart", api_tunnel_restart, methods=["POST"]),
+    Route("/api/orchestra/health", api_orchestra_health),
+    Route("/api/orchestra/tokens", api_orchestra_tokens),
+    Route("/api/solo/chat", api_solo_chat, methods=["POST"]),
+    Route("/api/orchestra/run", api_orchestra_run, methods=["POST"]),
     WebSocketRoute("/ws/stream", websocket_endpoint),
     Mount("/css", StaticFiles(directory=str(APP_DIR / "css")), name="css"),
     Mount("/js", StaticFiles(directory=str(APP_DIR / "js")), name="js"),
